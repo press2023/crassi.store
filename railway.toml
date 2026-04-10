@@ -2,7 +2,7 @@
 command = "npm install && npx prisma generate && npm run build:client"
 
 [deploy]
-startCommand = "npx prisma db push --accept-data-loss && node --import tsx server/index.ts"
+startCommand = "npx prisma db push --accept-data-loss && npx tsx server/index.ts"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 600
 restartPolicyType = "ON_FAILURE"
