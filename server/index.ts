@@ -239,6 +239,6 @@ if (isProd) {
   })
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '::', () => {
   console.log(`[classi] API ${isProd ? 'production' : 'dev'} on port ${PORT}`)
 })
