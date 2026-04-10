@@ -229,6 +229,9 @@ app.get('/api/orders/:id', async (req, res) => {
   }
 })
 
+const uploadsPublic = path.join(__dirname, '..', 'public', 'uploads')
+app.use('/uploads', express.static(uploadsPublic))
+
 if (isProd) {
   app.use(express.static(distDir))
   app.get('*', (_req, res) => {
@@ -236,6 +239,6 @@ if (isProd) {
   })
 }
 
-app.listen(PORT, () => {
-  console.log(`[classi] API ${isProd ? 'production' : 'dev'} http://localhost:${PORT}`)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[classi] API ${isProd ? 'production' : 'dev'} on port ${PORT}`)
 })
