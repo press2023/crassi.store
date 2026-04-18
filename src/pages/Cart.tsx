@@ -36,9 +36,6 @@ export function Cart() {
               <p className="text-sm font-medium text-slate-900 dark:text-white">
                 {isAr ? line.nameAr : line.name}
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                {t('size')}: {line.size}
-              </p>
               <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
                 {Number(line.price).toLocaleString()} IQD
               </p>

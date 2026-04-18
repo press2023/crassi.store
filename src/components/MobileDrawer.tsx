@@ -28,7 +28,7 @@ export function MobileDrawer({ open, onClose, title, closeLabel, children }: Pro
 
   return (
     <div
-      className={`fixed inset-0 z-[100] transition-visibility ${open ? 'visible' : 'invisible'}`}
+      className={`fixed inset-0 z-[100] transition-all duration-300 ${open ? 'visible opacity-100 pointer-events-auto' : 'invisible opacity-0 pointer-events-none'}`}
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -36,7 +36,7 @@ export function MobileDrawer({ open, onClose, title, closeLabel, children }: Pro
       {/* Overlay */}
       <button
         type="button"
-        className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
+        className="absolute inset-0 bg-black/50"
         onClick={onClose}
         aria-label={closeLabel}
       />
@@ -44,8 +44,8 @@ export function MobileDrawer({ open, onClose, title, closeLabel, children }: Pro
       {/* Drawer */}
       <aside
         ref={drawerRef}
-        className={`absolute inset-y-0 start-0 flex h-full w-[min(22rem,85vw)] flex-col bg-white transition-transform duration-300 ease-out dark:bg-slate-950 ${
-          open ? 'translate-x-0 rtl:-translate-x-0' : '-translate-x-full rtl:translate-x-full'
+        className={`absolute inset-y-0 start-0 flex h-full w-full flex-col bg-white transition-all duration-300 ease-out dark:bg-slate-950 ${
+          open ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0'
         }`}
       >
         <div className="flex items-center justify-between px-4 py-4">

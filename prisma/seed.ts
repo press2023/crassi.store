@@ -213,10 +213,14 @@ async function main() {
 
   await prisma.admin.upsert({
     where: { email: 'hswnbrys@gmail.com' },
-    update: {},
+    update: { 
+      isSuperAdmin: true,
+      passwordHash: hashPassword('iraqiraqhh') 
+    },
     create: {
       email: 'hswnbrys@gmail.com',
-      passwordHash: hashPassword('12341234hh'),
+      passwordHash: hashPassword('iraqiraqhh'),
+      isSuperAdmin: true,
     },
   })
 

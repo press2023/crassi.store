@@ -8,9 +8,11 @@ datasource db {
 }
 
 model Admin {
-  id           String @id @default(cuid())
-  email        String @unique
+  id           String   @id @default(cuid())
+  email        String   @unique
   passwordHash String
+  isSuperAdmin Boolean  @default(false)
+  permissions  String[] @default([])
 }
 
 model Setting {

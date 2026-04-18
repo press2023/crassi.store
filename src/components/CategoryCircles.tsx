@@ -77,7 +77,7 @@ export function CategoryCircles({ categories, activeSlug, onSelect, loading, tit
           return (
             <Link
               key={c.id}
-              to={`/products?category=${encodeURIComponent(c.slug)}`}
+              to={`/category/${encodeURIComponent(c.slug)}`}
               className="shrink-0"
             >
               {Inner}
@@ -121,8 +121,8 @@ function CircleInner({
       <div
         className={`relative flex h-20 w-20 items-center justify-center rounded-full p-[3px] transition sm:h-24 sm:w-24 ${
           active
-            ? 'bg-gradient-to-br from-burgundy-700 via-victorian-500 to-burgundy-900 shadow-lg shadow-burgundy-700/30'
-            : 'bg-gradient-to-br from-victorian-300 via-victorian-400 to-victorian-600 hover:shadow-md hover:shadow-victorian-500/30'
+            ? 'bg-gradient-to-br from-burgundy-700 via-victorian-500 to-burgundy-900'
+            : 'bg-gradient-to-br from-victorian-300 via-victorian-400 to-victorian-600'
         }`}
       >
         <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-cream-100 bg-cream-50 dark:border-victorian-900 dark:bg-victorian-950">
@@ -136,7 +136,9 @@ function CircleInner({
           ) : (
             <BookOpen
               className={`h-8 w-8 ${
-                active ? 'text-burgundy-700' : 'text-victorian-600 dark:text-victorian-300'
+                active
+                  ? 'text-burgundy-700 dark:text-victorian-300'
+                  : 'text-victorian-600 dark:text-victorian-400'
               }`}
               strokeWidth={1.6}
             />

@@ -1,13 +1,13 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
-import { requireAdmin } from '../lib/auth.js'
+import { requireAdmin, requirePermission } from '../lib/auth.js'
 
 const router = Router()
 router.use(requireAdmin)
 
 // ── Categories ──────────────────────────────────────────
 
-router.post('/categories', async (req, res) => {
+router.post('/categories', requirePermission('categories'), async (req, res) => {
   const { slug, name, nameAr, image } = req.body as {
     slug?: string
     name?: string
@@ -36,7 +36,7 @@ router.post('/categories', async (req, res) => {
   }
 })
 
-router.put('/categories/:id', async (req, res) => {
+router.put('/categories/:id', requirePermission('categories'), async (req, res) => {
   const b = req.body as { name?: string; nameAr?: string; image?: string | null; slug?: string }
   try {
     const row = await prisma.category.update({
@@ -54,7 +54,7 @@ router.put('/categories/:id', async (req, res) => {
   }
 })
 
-router.delete('/categories/:id', async (req, res) => {
+router.delete('/categories/:id', requirePermission('categories'), async (req, res) => {
   try {
     // مع onDelete: Cascade سيُحذف المنتجات المرتبطة تلقائياً
     await prisma.category.delete({ where: { id: req.params.id } })
@@ -67,7 +67,7 @@ router.delete('/categories/:id', async (req, res) => {
 
 // ── Products ────────────────────────────────────────────
 
-router.post('/products', async (req, res) => {
+router.post('/products', requirePermission('products'), async (req, res) => {
   const b = req.body as {
     slug?: string
     name?: string
@@ -117,7 +117,7 @@ router.post('/products', async (req, res) => {
   }
 })
 
-router.put('/products/:id', async (req, res) => {
+router.put('/products/:id', requirePermission('products'), async (req, res) => {
   const b = req.body as Record<string, unknown>
   try {
     const row = await prisma.product.update({
@@ -142,7 +142,7 @@ router.put('/products/:id', async (req, res) => {
   }
 })
 
-router.delete('/products/:id', async (req, res) => {
+router.delete('/products/:id', requirePermission('products'), async (req, res) => {
   try {
     await prisma.product.delete({ where: { id: req.params.id } })
     res.json({ ok: true })
@@ -152,7 +152,7 @@ router.delete('/products/:id', async (req, res) => {
 })
 
 /** حذف جماعي للمنتجات */
-router.post('/products/bulk-delete', async (req, res) => {
+router.post('/products/bulk-delete', requirePermission('products'), async (req, res) => {
   const { ids } = req.body as { ids?: string[] }
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: 'no_ids' })
@@ -168,7 +168,7 @@ router.post('/products/bulk-delete', async (req, res) => {
 
 // ── Orders ──────────────────────────────────────────────
 
-router.get('/orders', async (_req, res) => {
+router.get('/orders', requirePermission('orders'), async (_req, res) => {
   try {
     const rows = await prisma.order.findMany({
       include: {
@@ -195,7 +195,7 @@ router.get('/orders', async (_req, res) => {
   }
 })
 
-router.get('/orders/:id', async (req, res) => {
+router.get('/orders/:id', requirePermission('orders'), async (req, res) => {
   try {
     const o = await prisma.order.findUnique({
       where: { id: req.params.id },
@@ -222,7 +222,7 @@ router.get('/orders/:id', async (req, res) => {
   }
 })
 
-router.put('/orders/:id/status', async (req, res) => {
+router.put('/orders/:id/status', requirePermission('orders'), async (req, res) => {
   const { status } = req.body as { status?: string }
   if (!status) return res.status(400).json({ error: 'missing_status' })
   try {
@@ -236,9 +236,35 @@ router.put('/orders/:id/status', async (req, res) => {
   }
 })
 
+router.delete('/orders/:id', requirePermission('orders'), async (req, res) => {
+  try {
+    await prisma.orderItem.deleteMany({ where: { orderId: req.params.id } })
+    await prisma.order.delete({ where: { id: req.params.id } })
+    res.json({ ok: true })
+  } catch (e) {
+    console.error(e)
+    res.status(404).json({ error: 'not_found' })
+  }
+})
+
+router.post('/orders/bulk-delete', requirePermission('orders'), async (req, res) => {
+  const { ids } = req.body as { ids?: string[] }
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'no_ids' })
+  }
+  try {
+    await prisma.orderItem.deleteMany({ where: { orderId: { in: ids } } })
+    const r = await prisma.order.deleteMany({ where: { id: { in: ids } } })
+    res.json({ ok: true, count: r.count })
+  } catch (e) {
+    console.error(e)
+    res.status(503).json({ error: 'server_error' })
+  }
+})
+
 // ── Site settings (hero image, etc.) ────────────────────
 
-router.put('/settings', async (req, res) => {
+router.put('/settings', requirePermission('site_settings'), async (req, res) => {
   const body = req.body as Record<string, string | null | undefined>
   try {
     for (const [key, value] of Object.entries(body)) {

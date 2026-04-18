@@ -15,6 +15,15 @@ export async function fetchCategories(): Promise<Category[]> {
   return parseJson<Category[]>(res)
 }
 
+export async function fetchCategoryBySlug(slug: string): Promise<Category | null> {
+  try {
+    const categories = await fetchCategories()
+    return categories.find((c) => c.slug === slug) ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function fetchProducts(params?: {
   category?: string
   q?: string

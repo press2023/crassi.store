@@ -13,6 +13,8 @@ type Ctx = {
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   isAdmin: boolean
+  isSuperAdmin: boolean
+  permissions: string[]
   isLoading: boolean
 }
 
@@ -25,6 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.getItem(STORAGE),
   )
   const [email, setEmail] = useState<string | null>(null)
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false)
+  const [permissions, setPermissions] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
   useEffect(() => {
@@ -38,12 +42,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
       .then(async (r) => {
         if (!r.ok) throw new Error()
-        const d = (await r.json()) as { email: string }
+        const d = (await r.json()) as { email: string; isSuperAdmin: boolean; permissions: string[] }
         setEmail(d.email)
+        setIsSuperAdmin(Boolean(d.isSuperAdmin))
+        setPermissions(d.permissions || [])
       })
       .catch(() => {
         setToken(null)
         setEmail(null)
+        setIsSuperAdmin(false)
+        setPermissions([])
         localStorage.removeItem(STORAGE)
       })
       .finally(() => {
@@ -61,21 +69,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const err = await r.json().catch(() => ({})) as { error?: string }
       throw new Error(err.error ?? 'login_failed')
     }
-    const d = (await r.json()) as { token: string; email: string }
+    const d = (await r.json()) as { token: string; email: string; isSuperAdmin: boolean; permissions: string[] }
     localStorage.setItem(STORAGE, d.token)
     setToken(d.token)
     setEmail(d.email)
+    setIsSuperAdmin(Boolean(d.isSuperAdmin))
+    setPermissions(d.permissions || [])
   }, [])
 
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE)
     setToken(null)
     setEmail(null)
+    setIsSuperAdmin(false)
+    setPermissions([])
   }, [])
 
   const value = useMemo(
-    () => ({ token, email, login, logout, isAdmin: !!email, isLoading }),
-    [token, email, login, logout, isLoading],
+    () => ({ token, email, login, logout, isAdmin: !!email, isSuperAdmin, permissions, isLoading }),
+    [token, email, login, logout, isSuperAdmin, permissions, isLoading],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

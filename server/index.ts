@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 import express from 'express'
 import cors from 'cors'
@@ -235,9 +236,43 @@ const uploadsPublic = path.join(__dirname, '..', 'public', 'uploads')
 app.use('/uploads', express.static(uploadsPublic))
 
 if (isProd) {
-  app.use(express.static(distDir))
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(distDir, 'index.html'))
+  app.use(express.static(distDir, { index: false })) // Disable serving index.html natively for root so we can inject meta tags if needed
+  
+  app.get('*', async (req, res) => {
+    try {
+      let html = await fs.promises.readFile(path.join(distDir, 'index.html'), 'utf8')
+
+      // If the request is for a product details page
+      if (req.path.startsWith('/product/')) {
+        const slug = req.path.split('/')[2]
+        if (slug) {
+          const p = await prisma.product.findUnique({ where: { slug } })
+          if (p) {
+            const title = String(p.nameAr || p.name).replace(/"/g, '&quot;')
+            const desc = String(p.descriptionAr || p.description || '').replace(/"/g, '&quot;')
+            const img = p.images[0] || ''
+            const priceStr = `${Number(p.price).toLocaleString()} IQD`
+            
+            const metaTags = `
+              <meta property="og:title" content="${title} | Classi Store" />
+              <meta property="og:description" content="${priceStr} - ${desc}" />
+              <meta property="og:image" content="${img}" />
+              <meta property="og:type" content="product" />
+              <meta name="twitter:card" content="summary_large_image" />
+              <meta name="twitter:title" content="${title} | Classi Store" />
+              <meta name="twitter:description" content="${priceStr} - ${desc}" />
+              <meta name="twitter:image" content="${img}" />
+            `
+            html = html.replace('</head>', `${metaTags}</head>`)
+          }
+        }
+      }
+
+      res.send(html)
+    } catch (e) {
+      console.error('Error serving index.html', e)
+      res.status(500).send('Server Error')
+    }
   })
 }
 

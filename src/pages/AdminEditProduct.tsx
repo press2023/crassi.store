@@ -26,7 +26,6 @@ export function AdminEditProduct() {
   const [nameAr, setNameAr] = useState('')
   const [descAr, setDescAr] = useState('')
   const [price, setPrice] = useState('')
-  const [sizes, setSizes] = useState('')
   const [stock, setStock] = useState('10')
   const [imageFiles, setImageFiles] = useState<string[]>([])
   const [catId, setCatId] = useState('')
@@ -47,7 +46,7 @@ export function AdminEditProduct() {
         const p = all.find((x) => x.id === id)
         if (p) {
           setSlug(p.slug); setNameAr(p.nameAr); setDescAr(p.descriptionAr)
-          setPrice(String(p.price)); setSizes(p.sizes.join(', ')); setStock(String(p.stock))
+          setPrice(String(p.price)); setStock(String(p.stock))
           setImageFiles([...p.images]); setCatId(p.category?.id ?? ''); setFeatured(p.featured)
         }
       }
@@ -84,7 +83,7 @@ export function AdminEditProduct() {
     e.preventDefault(); setBusy(true)
     const body = {
       slug, name: nameAr, nameAr, description: descAr, descriptionAr: descAr,
-      price: Number(price), sizes: sizes.split(',').map((s) => s.trim()).filter(Boolean),
+      price: Number(price), sizes: [],
       stock: Number(stock), images: imageFiles, categoryId: catId, featured,
     }
     if (id) {
@@ -141,11 +140,6 @@ export function AdminEditProduct() {
             <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className={inp} />
           </label>
         </div>
-
-        <label className="block">
-          <span className="text-xs text-slate-400">المقاسات (فاصلة بين كل مقاس)</span>
-          <input value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="S, M, L, XL" className={inp} />
-        </label>
 
         <label className="block">
           <span className="text-xs text-slate-400">التصنيف</span>

@@ -42,6 +42,7 @@ export function Checkout() {
   const [loading, setLoading] = useState(false)
   const [doneId, setDoneId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
 
   if (!items.length && !doneId) {
     return (
@@ -82,8 +83,19 @@ export function Checkout() {
     )
   }
 
+  const validatePhone = (v: string) => {
+    const digits = v.replace(/\D/g, '')
+    if (!digits) return isAr ? 'رقم الهاتف مطلوب' : 'Phone number is required'
+    if (!digits.startsWith('07')) return isAr ? 'يجب أن يبدأ بـ 07' : 'Must start with 07'
+    if (digits.length !== 11) return isAr ? `يجب أن يكون 11 رقم (حالي: ${digits.length})` : `Must be 11 digits (current: ${digits.length})`
+    return null
+  }
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const pErr = validatePhone(phone)
+    setPhoneError(pErr)
+    if (pErr) return
     setError(null)
     setLoading(true)
     try {
@@ -138,10 +150,17 @@ export function Checkout() {
             type="tel"
             dir="ltr"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value
+              setPhone(v)
+              setPhoneError(validatePhone(v))
+            }}
             placeholder="07xx xxx xxxx"
-            className={inputClass}
+            maxLength={11}
+            className={inputClass + (phoneError ? ' !border-rose-400 dark:!border-rose-500' : phone && !phoneError ? ' !border-green-400 dark:!border-green-500' : '')}
           />
+          {phoneError && <p className="mt-1 text-xs text-rose-500">{phoneError}</p>}
+          {phone && !phoneError && <p className="mt-1 text-xs text-green-600">{isAr ? 'رقم صحيح ✓' : 'Valid number ✓'}</p>}
         </label>
 
         <label className="block">

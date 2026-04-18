@@ -16,6 +16,9 @@ import {
   Square,
   Tag,
   Trash2,
+  Users,
+  Lock,
+  Shield,
   X,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -24,7 +27,7 @@ import type { Category, Product } from '../types'
 
 const base = import.meta.env.VITE_API_BASE ?? ''
 
-type Tab = 'categories' | 'products' | 'orders' | 'site'
+type Tab = 'categories' | 'products' | 'orders' | 'site' | 'admins'
 
 type OrderItem = {
   id: string
@@ -58,9 +61,15 @@ function api(path: string, token: string, opts?: RequestInit) {
 }
 
 export function Admin() {
-  const { token, email, isAdmin, isLoading, logout } = useAuth()
+  const { token, email, isAdmin, isSuperAdmin, permissions, isLoading, logout } = useAuth()
   const { isAr } = useLanguage()
-  const [tab, setTab] = useState<Tab>('orders')
+  const [tab, setTab] = useState<Tab>(() => {
+    if (isSuperAdmin || permissions.includes('orders')) return 'orders'
+    if (permissions.includes('products')) return 'products'
+    if (permissions.includes('categories')) return 'categories'
+    if (permissions.includes('site_settings')) return 'site'
+    return 'orders'
+  })
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -115,16 +124,18 @@ export function Admin() {
       </div>
 
       <div className="mb-8 flex gap-2 overflow-x-auto pb-1">
-        {tabBtn('orders', <ClipboardList className="h-4 w-4" />, isAr ? 'الطلبات' : 'Orders')}
-        {tabBtn('products', <Package className="h-4 w-4" />, isAr ? 'المنتجات' : 'Products')}
-        {tabBtn('categories', <Tag className="h-4 w-4" />, isAr ? 'التصنيفات' : 'Categories')}
-        {tabBtn('site', <ImageIcon className="h-4 w-4" />, isAr ? 'إعدادات الموقع' : 'Site')}
+        {(isSuperAdmin || permissions.includes('orders')) && tabBtn('orders', <ClipboardList className="h-4 w-4" />, isAr ? 'الطلبات' : 'Orders')}
+        {(isSuperAdmin || permissions.includes('products')) && tabBtn('products', <Package className="h-4 w-4" />, isAr ? 'المنتجات' : 'Products')}
+        {(isSuperAdmin || permissions.includes('categories')) && tabBtn('categories', <Tag className="h-4 w-4" />, isAr ? 'التصنيفات' : 'Categories')}
+        {(isSuperAdmin || permissions.includes('site_settings')) && tabBtn('site', <ImageIcon className="h-4 w-4" />, isAr ? 'إعدادات الموقع' : 'Site')}
+        {isSuperAdmin && tabBtn('admins', <Users className="h-4 w-4" />, isAr ? 'المشرفون' : 'Admins')}
       </div>
 
-      {tab === 'categories' && <CategoriesTab token={token!} categories={categories} isAr={isAr} reload={load} />}
-      {tab === 'products' && <ProductsTab token={token!} products={products} categories={categories} isAr={isAr} reload={load} />}
-      {tab === 'orders' && <OrdersTab token={token!} orders={orders} isAr={isAr} reload={load} />}
-      {tab === 'site' && <SiteTab token={token!} isAr={isAr} />}
+      {(isSuperAdmin || permissions.includes('categories')) && tab === 'categories' && <CategoriesTab token={token!} categories={categories} isAr={isAr} reload={load} />}
+      {(isSuperAdmin || permissions.includes('products')) && tab === 'products' && <ProductsTab token={token!} products={products} categories={categories} isAr={isAr} reload={load} />}
+      {(isSuperAdmin || permissions.includes('orders')) && tab === 'orders' && <OrdersTab token={token!} orders={orders} isAr={isAr} reload={load} />}
+      {(isSuperAdmin || permissions.includes('site_settings')) && tab === 'site' && <SiteTab token={token!} isAr={isAr} />}
+      {isSuperAdmin && tab === 'admins' && <AdminsTab token={token!} isAr={isAr} />}
     </div>
   )
 }
@@ -884,6 +895,183 @@ function OrdersTab({ orders, isAr }: { token: string; orders: Order[]; isAr: boo
         <p className="py-10 text-center text-sm text-victorian-400">
           {isAr ? 'لا توجد طلبات بهذه الحالة' : 'No orders with this status'}
         </p>
+      )}
+    </div>
+  )
+}
+
+/* ─── Admins ─────────────────────────────────────────── */
+
+type AdminUser = { id: string; email: string; isSuperAdmin: boolean; permissions: string[]; createdAt: string }
+
+function AdminsTab({ token, isAr }: { token: string; isAr: boolean }) {
+  const [admins, setAdmins] = useState<AdminUser[]>([])
+  const [loading, setLoading] = useState(true)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<AdminUser | null>(null)
+
+  // Form states
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [perms, setPerms] = useState<string[]>([])
+  const [busy, setBusy] = useState(false)
+
+  const ALL_PERMS = [
+    { id: 'orders', labelAr: 'الطلبات', labelEn: 'Orders' },
+    { id: 'products', labelAr: 'المنتجات', labelEn: 'Products' },
+    { id: 'categories', labelAr: 'التصنيفات', labelEn: 'Categories' },
+    { id: 'site_settings', labelAr: 'إعدادات الموقع', labelEn: 'Site Settings' },
+  ]
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await api('/api/auth/admin-users', token)
+      if (res.ok) setAdmins(await res.json())
+    } catch { /* */ }
+    setLoading(false)
+  }, [token])
+
+  useEffect(() => { load() }, [load])
+
+  const openForm = (admin?: AdminUser) => {
+    setEditing(admin ?? null)
+    setEmail(admin?.email ?? '')
+    setPassword('')
+    setPerms(admin?.permissions ?? [])
+    setFormOpen(true)
+  }
+
+  const closeForm = () => {
+    setFormOpen(false)
+    setEditing(null)
+    setEmail('')
+    setPassword('')
+    setPerms([])
+  }
+
+  const togglePerm = (id: string) => {
+    setPerms(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
+  }
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setBusy(true)
+    try {
+      if (editing) {
+        const res = await api(`/api/auth/admin-users/${editing.id}`, token, {
+          method: 'PUT',
+          body: JSON.stringify({ password: password || undefined, permissions: perms })
+        })
+        if (res.ok) {
+          closeForm()
+          load()
+        } else {
+          alert(isAr ? 'عذرًا، تعذر التحديث' : 'Failed to update')
+        }
+      } else {
+        const res = await api('/api/auth/admin-users', token, {
+          method: 'POST',
+          body: JSON.stringify({ email, password, permissions: perms })
+        })
+        if (res.ok) {
+          closeForm()
+          load()
+        } else {
+          alert(isAr ? 'البريد الإلكتروني موجود مسبقاً' : 'Email might exist')
+        }
+      }
+    } catch { alert(isAr ? 'خطأ في الشبكة' : 'Network error') }
+    setBusy(false)
+  }
+
+  const del = async (id: string) => {
+    if (!confirm(isAr ? 'قم بتأكيد حذف هذا المشرف.' : 'Delete this admin?')) return
+    const res = await api(`/api/auth/admin-users/${id}`, token, { method: 'DELETE' })
+    if (res.ok) load()
+    else alert(isAr ? 'تعذر الحذف' : 'Cannot delete')
+  }
+
+  if (loading) return <div className="py-8 text-center text-sm text-victorian-500">{isAr ? 'جاري التحميل...' : 'Loading...'}</div>
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-display font-bold text-victorian-900 dark:text-cream-50">{isAr ? 'المشرفون' : 'Admins'}</h2>
+        <button type="button" onClick={() => openForm()} className="inline-flex items-center gap-2 border-2 border-burgundy-700 bg-burgundy-700 px-5 py-2 font-display text-xs font-semibold uppercase tracking-[0.2em] text-cream-50 hover:bg-burgundy-800">
+          <Shield className="h-4 w-4" /> {isAr ? 'إضافة مشرف' : 'Add Admin'}
+        </button>
+      </div>
+
+      <div className="divide-y divide-victorian-200 dark:divide-victorian-800 border border-victorian-200 dark:border-victorian-800 bg-cream-50 dark:bg-victorian-950/60 p-4">
+        {admins.map(a => (
+          <div key={a.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+            <div>
+              <p className="font-semibold text-victorian-900 dark:text-cream-50 flex items-center gap-2">
+                {a.email}
+                {a.isSuperAdmin && <span className="bg-burgundy-100 text-burgundy-800 text-[10px] px-2 py-0.5 rounded-full dark:bg-burgundy-900 dark:text-burgundy-200">{isAr ? 'المدير الرئيسي' : 'Super Admin'}</span>}
+              </p>
+              {!a.isSuperAdmin && (
+                <p className="text-xs text-victorian-500 mt-1">
+                  {a.permissions.length === 0 ? (isAr ? 'لا توجد صلاحيات' : 'No permissions') : a.permissions.map(p => ALL_PERMS.find(ap => ap.id === p)?.labelAr || p).join('، ')}
+                </p>
+              )}
+            </div>
+            {!a.isSuperAdmin && (
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => openForm(a)} className="p-2 border border-victorian-300 text-victorian-600 hover:bg-victorian-100 dark:border-victorian-700 dark:hover:bg-victorian-900">
+                  <Edit3 className="h-4 w-4" />
+                </button>
+                <button type="button" onClick={() => del(a.id)} className="p-2 border border-burgundy-300 text-burgundy-600 hover:bg-burgundy-50 dark:border-burgundy-800 dark:hover:bg-burgundy-900/30">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            {a.isSuperAdmin && (
+              <div className="text-[11px] text-victorian-400">{isAr ? 'المدير الرئيسي مع صلاحيات كاملة' : 'Super admin with full access'}</div>
+            )}
+          </div>
+        ))}
+        {admins.length === 0 && <div className="text-center py-4 text-sm text-victorian-500">لا يوجد مشرفون آخرون</div>}
+      </div>
+
+      {formOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
+          <form onSubmit={save} className="w-full max-w-md bg-cream-50 border border-victorian-200 p-6 shadow-xl dark:bg-victorian-950 dark:border-victorian-800">
+            <div className="mb-4 flex items-center justify-between border-b border-victorian-200 pb-3 dark:border-victorian-800">
+              <h3 className="text-lg font-bold text-victorian-900 dark:text-cream-50">{editing ? (isAr ? 'تعديل بيانات المشرف' : 'Edit Admin') : (isAr ? 'إضافة مشرف جديد' : 'New Admin')}</h3>
+              <button type="button" onClick={closeForm} className="text-victorian-500 hover:text-burgundy-700"><X className="h-5 w-5" /></button>
+            </div>
+            
+            <div className="space-y-4">
+              <label className="block">
+                <span className="text-xs text-victorian-500">{isAr ? 'البريد الإلكتروني' : 'Email'}</span>
+                <input required={!editing} disabled={!!editing} type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 w-full border border-victorian-300 bg-cream-50 px-4 py-2 text-sm dark:border-victorian-700 dark:bg-victorian-900 dark:text-cream-100 disabled:opacity-50" />
+              </label>
+              <label className="block">
+                <span className="text-xs text-victorian-500">{editing ? (isAr ? 'كلمة المرور الجديدة (اختياري للإبقاء دون تغيير)' : 'New Password (Optional)') : (isAr ? 'كلمة المرور' : 'Password')}</span>
+                <input required={!editing} type="text" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 w-full border border-victorian-300 bg-cream-50 px-4 py-2 text-sm dark:border-victorian-700 dark:bg-victorian-900 dark:text-cream-100" />
+              </label>
+              
+              <div>
+                <span className="text-xs text-victorian-500 mb-3 block">{isAr ? 'الصلاحيات' : 'Permissions'}</span>
+                <div className="space-y-2">
+                  {ALL_PERMS.map(p => (
+                    <label key={p.id} className="flex items-center gap-3 text-sm text-victorian-700 dark:text-cream-200 cursor-pointer p-2 border border-victorian-200 hover:bg-victorian-100 dark:border-victorian-800 dark:hover:bg-victorian-900">
+                      <input type="checkbox" checked={perms.includes(p.id)} onChange={() => togglePerm(p.id)} className="rounded border-victorian-300 text-burgundy-700 focus:ring-burgundy-700 h-4 w-4" />
+                      {isAr ? p.labelAr : p.labelEn}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3 border-t border-victorian-200 pt-4 dark:border-victorian-800">
+              <button type="button" onClick={closeForm} className="px-5 py-2 text-sm border font-bold uppercase tracking-[0.1em] border-victorian-300 text-victorian-700 hover:bg-victorian-100 dark:border-victorian-700 dark:text-cream-200 dark:hover:bg-victorian-900">{isAr ? 'إلغاء' : 'Cancel'}</button>
+              <button type="submit" disabled={busy} className="px-5 py-2 text-sm border-2 font-bold uppercase tracking-[0.1em] border-burgundy-700 bg-burgundy-700 text-cream-50 hover:bg-burgundy-800 disabled:opacity-50">{busy ? '...' : (isAr ? 'حفظ الحساب' : 'Save')}</button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   )

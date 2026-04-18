@@ -1,11 +1,31 @@
 import { Link } from 'react-router-dom'
+import { ShoppingCart } from 'lucide-react'
 import type { Product } from '../types'
+import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
 
 export function ProductCard({ product }: { product: Product }) {
   const { isAr } = useLanguage()
+  const { add } = useCart()
   const title = isAr ? product.nameAr : product.name
   const img = product.images[0] ?? '/placeholder.svg'
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (product.stock > 0) {
+      add({
+        productId: product.id,
+        slug: product.slug,
+        name: product.name,
+        nameAr: product.nameAr,
+        image: product.images[0] || '/placeholder.svg',
+        price: product.price,
+        size: product.sizes?.[0] || 'default',
+        quantity: 1,
+      })
+    }
+  }
 
   return (
     <Link to={`/product/${product.slug}`} className="group block">
@@ -27,12 +47,23 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
         )}
       </div>
-      <div className="mt-3 space-y-0.5">
-        <p className="text-sm text-slate-900 dark:text-slate-100">{title}</p>
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">
-          {Number(product.price).toLocaleString()}{' '}
-          <span className="font-normal text-slate-400">IQD</span>
-        </p>
+      <div className="mt-3 space-y-2">
+        <p className="text-base font-medium text-victorian-900 dark:text-cream-100">{title}</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xl font-bold text-burgundy-700 dark:text-cream-50">
+            {Number(product.price).toLocaleString()}{' '}
+            <span className="text-sm font-medium text-victorian-600 dark:text-victorian-300">د.ع</span>
+          </p>
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={product.stock <= 0}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-victorian-300 bg-victorian-50 text-burgundy-700 hover:border-burgundy-700 hover:bg-burgundy-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed dark:border-victorian-600 dark:text-victorian-300 dark:bg-victorian-900 dark:hover:border-victorian-400 dark:hover:bg-victorian-400 dark:hover:text-victorian-950 transition-colors duration-200"
+            title={isAr ? 'إضافة للسلة' : 'Add to cart'}
+          >
+            <ShoppingCart className="h-6 w-6" />
+          </button>
+        </div>
       </div>
     </Link>
   )

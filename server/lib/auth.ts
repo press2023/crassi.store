@@ -1,5 +1,6 @@
 import { scryptSync, randomBytes, randomUUID } from 'crypto'
 import type { Request, Response, NextFunction } from 'express'
+import { prisma } from './prisma.js'
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex')
@@ -32,13 +33,48 @@ export function getSession(token: string): string | null {
   return s.email
 }
 
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization
   if (!header?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'unauthorized' })
   }
   const email = getSession(header.slice(7))
   if (!email) return res.status(401).json({ error: 'session_expired' })
-  ;(req as Request & { adminEmail: string }).adminEmail = email
+
+  try {
+    const admin = await prisma.admin.findUnique({ where: { email } })
+    if (!admin) return res.status(401).json({ error: 'invalid_admin' })
+
+    // Attach full admin info
+    ;(req as any).adminEmail = admin.email
+    ;(req as any).adminUser = admin
+    next()
+  } catch (e) {
+    res.status(503).json({ error: 'auth_db_error' })
+  }
+}
+
+export function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  const admin = (req as any).adminUser
+  if (!admin || !admin.isSuperAdmin) {
+    return res.status(403).json({ error: 'forbidden_superadmin_only' })
+  }
   next()
+}
+
+export function requirePermission(permission: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const admin = (req as any).adminUser
+    if (!admin) return res.status(401).json({ error: 'unauthorized' })
+    
+    // SuperAdmin has all permissions
+    if (admin.isSuperAdmin) return next()
+    
+    // Check specific permission
+    if (admin.permissions && admin.permissions.includes(permission)) {
+      return next()
+    }
+    
+    res.status(403).json({ error: 'forbidden_missing_permission' })
+  }
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Calendar,
@@ -8,6 +8,7 @@ import {
   Package,
   Phone,
   StickyNote,
+  Trash2,
   User,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -52,11 +53,13 @@ const STATUS_OPTIONS = [
 
 export function AdminOrder() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { token, isAdmin, isLoading } = useAuth()
   const { isAr } = useLanguage()
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [savingStatus, setSavingStatus] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -119,6 +122,30 @@ export function AdminOrder() {
     setTimeout(() => setCopied(false), 1500)
   }
 
+  const deleteOrder = async () => {
+    const ok = window.confirm(
+      isAr
+        ? 'هل أنت متأكد من حذف هذا الطلب نهائياً؟ لا يمكن التراجع.'
+        : 'Delete this order permanently? This cannot be undone.'
+    )
+    if (!ok) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`${base}/api/admin/orders/${order.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        navigate('/admin', { replace: true })
+        return
+      }
+      alert(isAr ? 'تعذر الحذف' : 'Delete failed')
+    } catch {
+      alert(isAr ? 'خطأ في الشبكة' : 'Network error')
+    }
+    setDeleting(false)
+  }
+
   const currentStatus = STATUS_OPTIONS.find((s) => s.value === order.status) ?? STATUS_OPTIONS[0]
   const date = new Date(order.createdAt)
   const dateStr = date.toLocaleDateString(isAr ? 'ar-IQ' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -127,14 +154,27 @@ export function AdminOrder() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
-      {/* Back */}
-      <Link
-        to="/admin"
-        className="mb-5 inline-flex items-center gap-2 text-sm text-victorian-600 hover:text-burgundy-700 dark:text-cream-300"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {isAr ? 'العودة إلى الطلبات' : 'Back to orders'}
-      </Link>
+      {/* Back + delete */}
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <Link
+          to="/admin"
+          className="inline-flex items-center gap-2 text-sm text-victorian-600 hover:text-burgundy-700 dark:text-cream-300"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {isAr ? 'العودة إلى الطلبات' : 'Back to orders'}
+        </Link>
+        <button
+          type="button"
+          onClick={deleteOrder}
+          disabled={deleting}
+          className="inline-flex items-center gap-2 border border-burgundy-300 bg-burgundy-50 px-4 py-2 text-sm font-semibold text-burgundy-700 transition hover:bg-burgundy-100 disabled:opacity-50 dark:border-burgundy-800 dark:bg-burgundy-900/30 dark:text-burgundy-300 dark:hover:bg-burgundy-900/50"
+        >
+          <Trash2 className="h-4 w-4" />
+          {deleting
+            ? (isAr ? 'جارِ الحذف…' : 'Deleting…')
+            : (isAr ? 'حذف الطلب' : 'Delete order')}
+        </button>
+      </div>
 
       {/* Header card */}
       <div className="mb-6 border border-victorian-200 bg-cream-50 p-5 dark:border-victorian-800 dark:bg-victorian-950/60">
@@ -283,8 +323,6 @@ export function AdminOrder() {
                         </p>
                       )}
                       <p className="mt-1 text-xs text-victorian-500">
-                        {isAr ? 'المقاس' : 'Size'}: <span className="font-semibold">{it.size}</span>
-                        {' · '}
                         {isAr ? 'الكمية' : 'Qty'}: <span className="font-semibold">{it.quantity}</span>
                       </p>
                       <p className="mt-0.5 text-xs text-victorian-500">

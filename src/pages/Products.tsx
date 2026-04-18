@@ -12,7 +12,6 @@ import type { Category, Product } from '../types'
 export function Products() {
   const { t, isAr } = useLanguage()
   const [params, setParams] = useSearchParams()
-  const cat = params.get('category') ?? ''
   const [q, setQ] = useState(params.get('q') ?? '')
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -20,8 +19,8 @@ export function Products() {
   const [catLoading, setCatLoading] = useState(true)
 
   const queryArgs = useMemo(
-    () => ({ category: cat || undefined, q: q.trim() || undefined }),
-    [cat, q],
+    () => ({ q: q.trim() || undefined }),
+    [q],
   )
 
   useEffect(() => {
@@ -42,13 +41,6 @@ export function Products() {
     return () => { alive = false }
   }, [queryArgs])
 
-  const setCategory = (slug: string) => {
-    const next = new URLSearchParams(params)
-    if (slug) next.set('category', slug)
-    else next.delete('category')
-    setParams(next)
-  }
-
   const onSearch = (e: FormEvent) => {
     e.preventDefault()
     const next = new URLSearchParams(params)
@@ -67,8 +59,6 @@ export function Products() {
       <div className="mt-8">
         <CategoryCircles
           categories={categories}
-          activeSlug={cat}
-          onSelect={setCategory}
           loading={catLoading}
         />
       </div>

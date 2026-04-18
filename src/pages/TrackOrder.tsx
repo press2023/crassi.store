@@ -181,7 +181,7 @@ export function TrackOrder() {
                             ) : (
                               <p className="text-sm font-medium text-slate-900 dark:text-white">{item.productName}</p>
                             )}
-                            <p className="text-xs text-slate-400">{item.size} × {item.quantity}</p>
+                            <p className="text-xs text-slate-400">× {item.quantity}</p>
                           </div>
                           <p className="shrink-0 text-xs font-medium text-slate-500">{Number(item.unitPrice).toLocaleString()} IQD</p>
                         </div>

@@ -6,6 +6,7 @@ import { Admin } from './pages/Admin'
 import { AdminEditProduct } from './pages/AdminEditProduct'
 import { AdminOrder } from './pages/AdminOrder'
 import { Cart } from './pages/Cart'
+import { CategoryPage } from './pages/CategoryPage'
 import { Checkout } from './pages/Checkout'
 import { Home } from './pages/Home'
 import { Login } from './pages/Login'
@@ -22,6 +23,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="products" element={<Products />} />
+        <Route path="category/:slug" element={<CategoryPage />} />
         <Route path="product/:slug" element={<ProductDetail />} />
         <Route path="cart" element={<Cart />} />
         <Route path="checkout" element={<Checkout />} />
