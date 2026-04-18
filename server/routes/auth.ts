@@ -31,8 +31,8 @@ router.get('/me', requireAdmin, (req, res) => {
 router.get('/admin-users', requireAdmin, requireSuperAdmin, async (req, res) => {
   try {
     const users = await prisma.admin.findMany({
-      select: { id: true, email: true, isSuperAdmin: true, permissions: true, createdAt: true },
-      orderBy: { createdAt: 'asc' }
+      select: { id: true, email: true, isSuperAdmin: true, permissions: true },
+      orderBy: { email: 'asc' }
     })
     res.json(users)
   } catch (e) {
@@ -51,7 +51,7 @@ router.post('/admin-users', requireAdmin, requireSuperAdmin, async (req, res) =>
         permissions: Array.isArray(b.permissions) ? b.permissions : [],
         isSuperAdmin: false
       },
-      select: { id: true, email: true, isSuperAdmin: true, permissions: true, createdAt: true }
+      select: { id: true, email: true, isSuperAdmin: true, permissions: true }
     })
     res.status(201).json(row)
   } catch (e: unknown) {
@@ -70,7 +70,7 @@ router.put('/admin-users/:id', requireAdmin, requireSuperAdmin, async (req, res)
     const row = await prisma.admin.update({
       where: { id: req.params.id },
       data,
-      select: { id: true, email: true, isSuperAdmin: true, permissions: true, createdAt: true }
+      select: { id: true, email: true, isSuperAdmin: true, permissions: true }
     })
     res.json(row)
   } catch (e) {
