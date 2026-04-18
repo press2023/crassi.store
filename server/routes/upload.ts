@@ -50,7 +50,8 @@ router.post('/', async (req, res) => {
 
     const hash = crypto.randomBytes(8).toString('hex')
     const safeName = (filename ?? 'img').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 30)
-    const name = `${safeName}-${hash}.${ext}`
+    const fileName = `${safeName}-${hash}.${ext}`
+    const r2Key = `products/${fileName}`
 
     if (isR2Enabled && s3Client) {
       try {
@@ -59,20 +60,21 @@ router.post('/', async (req, res) => {
         
         await s3Client.send(new PutObjectCommand({
           Bucket: bucket,
-          Key: name,
+          Key: r2Key,
           Body: buffer,
           ContentType: `image/${ext}`
         }))
         
         const baseUrl = publicUrl.endsWith('/') ? publicUrl.slice(0, -1) : publicUrl
-        return res.json({ url: `${baseUrl}/${name}` })
+        return res.json({ url: `${baseUrl}/${r2Key}` })
       } catch (cloudErr) {
         console.error('R2 Upload error:', cloudErr)
         return res.status(500).json({ error: 'cloud_upload_failed' })
       }
     } else {
-      fs.writeFileSync(path.join(uploadsDir, name), buffer)
-      return res.json({ url: `/uploads/${name}` })
+      const filePath = path.join(uploadsDir, fileName)
+      fs.writeFileSync(filePath, buffer)
+      return res.json({ url: `/uploads/${fileName}` })
     }
   } catch (e) {
     console.error(e)
