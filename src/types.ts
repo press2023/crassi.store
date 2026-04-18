@@ -3,6 +3,7 @@ export type Category = {
   slug: string
   name: string
   nameAr: string
+  image?: string | null
 }
 
 export type Product = {

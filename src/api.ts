@@ -32,6 +32,26 @@ export async function fetchProductBySlug(slug: string): Promise<Product> {
   return parseJson<Product>(res)
 }
 
+export type SiteSettings = {
+  heroImage?: string
+  heroTitle?: string
+  heroSubtitle?: string
+  aboutTitleAr?: string
+  aboutBodyAr?: string
+  aboutTitleEn?: string
+  aboutBodyEn?: string
+}
+
+export async function fetchSettings(): Promise<SiteSettings> {
+  try {
+    const res = await fetch(`${base}/api/settings`)
+    if (!res.ok) return {}
+    return (await res.json()) as SiteSettings
+  } catch {
+    return {}
+  }
+}
+
 export async function createOrder(payload: {
   customerName: string
   email?: string

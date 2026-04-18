@@ -17,7 +17,7 @@ function api(path: string, token: string, opts?: RequestInit) {
 export function AdminEditProduct() {
   const { id } = useParams<{ id: string }>()
   const isNew = !id
-  const { token, isAdmin } = useAuth()
+  const { token, isAdmin, isLoading } = useAuth()
   const { isAr } = useLanguage()
   const navigate = useNavigate()
 
@@ -56,6 +56,10 @@ export function AdminEditProduct() {
   }, [token, id])
 
   useEffect(() => { loadData() }, [loadData])
+
+  if (isLoading) {
+    return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900 dark:border-slate-800 dark:border-t-white"></div></div>
+  }
 
   if (!isAdmin) return <Navigate to="/login" replace />
 

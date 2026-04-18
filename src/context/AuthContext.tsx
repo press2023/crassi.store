@@ -13,6 +13,7 @@ type Ctx = {
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   isAdmin: boolean
+  isLoading: boolean
 }
 
 const AuthContext = createContext<Ctx | null>(null)
@@ -24,10 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.getItem(STORAGE),
   )
   const [email, setEmail] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
   useEffect(() => {
     if (!token) {
       setEmail(null)
+      setIsLoading(false)
       return
     }
     fetch(`${base}/api/auth/me`, {
@@ -42,6 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(null)
         setEmail(null)
         localStorage.removeItem(STORAGE)
+      })
+      .finally(() => {
+        setIsLoading(false)
       })
   }, [token])
 
@@ -68,8 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ token, email, login, logout, isAdmin: !!email }),
-    [token, email, login, logout],
+    () => ({ token, email, login, logout, isAdmin: !!email, isLoading }),
+    [token, email, login, logout, isLoading],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

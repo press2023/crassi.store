@@ -13,11 +13,17 @@ model Admin {
   passwordHash String
 }
 
+model Setting {
+  key   String @id
+  value String
+}
+
 model Category {
   id       String    @id @default(cuid())
   slug     String    @unique
   name     String
   nameAr   String
+  image    String?
   products Product[]
 }
 
@@ -34,7 +40,7 @@ model Product {
   stock         Int         @default(0)
   featured      Boolean     @default(false)
   categoryId    String
-  category      Category    @relation(fields: [categoryId], references: [id])
+  category      Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   orderItems    OrderItem[]
 }
 
@@ -58,8 +64,8 @@ model OrderItem {
   id          String  @id @default(cuid())
   orderId     String
   order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId   String
-  product     Product @relation(fields: [productId], references: [id])
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   quantity    Int
   size        String
   unitPrice   Decimal @db.Decimal(10, 2)

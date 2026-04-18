@@ -10,9 +10,27 @@ function hashPassword(password: string): string {
 }
 
 const categories = [
-  { slug: 'men', name: 'Men', nameAr: 'رجال' },
-  { slug: 'women', name: 'Women', nameAr: 'نساء' },
-  { slug: 'kids', name: 'Kids', nameAr: 'أطفال' },
+  {
+    slug: 'men',
+    name: 'Gentlemen',
+    nameAr: 'السادة',
+    image:
+      'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=600&q=80',
+  },
+  {
+    slug: 'women',
+    name: 'Ladies',
+    nameAr: 'السيدات',
+    image:
+      'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&q=80',
+  },
+  {
+    slug: 'kids',
+    name: 'Young Heirs',
+    nameAr: 'الورثة الصغار',
+    image:
+      'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80',
+  },
 ]
 
 async function main() {
@@ -21,8 +39,8 @@ async function main() {
   for (const c of categories) {
     const row = await prisma.category.upsert({
       where: { slug: c.slug },
-      update: { name: c.name, nameAr: c.nameAr },
-      create: { slug: c.slug, name: c.name, nameAr: c.nameAr },
+      update: { name: c.name, nameAr: c.nameAr, image: c.image },
+      create: { slug: c.slug, name: c.name, nameAr: c.nameAr, image: c.image },
     })
     catMap[c.slug] = row.id
   }

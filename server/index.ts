@@ -8,6 +8,7 @@ import { prisma } from './lib/prisma.js'
 import authRoutes from './routes/auth.js'
 import adminRoutes from './routes/admin.js'
 import uploadRoutes from './routes/upload.js'
+import settingsRoutes from './routes/settings.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -26,6 +27,7 @@ app.use(express.json({ limit: '10mb' }))
 app.use('/api/auth', authRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/upload', uploadRoutes)
+app.use('/api/settings', settingsRoutes)
 
 function serializeProduct(p: {
   price: { toString(): string }
