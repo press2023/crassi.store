@@ -27,10 +27,19 @@ export function ProductDetail() {
   useEffect(() => {
     if (!slug) return
     let ok = true
-    setProduct(null); setErr(false); setSimilar([]); setSimilarLoading(true); setActiveImg(0); setQty(1); setSelectedSize(''); setAdded(false)
+    setProduct(null)
+    setErr(false)
+    setSimilar([])
+    setSimilarLoading(true)
+    setActiveImg(0)
+    setImgKey(0)
+    setViewerOpen(false)
+    setQty(1)
+    setSelectedSize('')
+    setAdded(false)
     fetchProductBySlug(slug)
       .then((p) => {
-        if (!ok) return
+        if (!ok || p.slug !== slug) return
         setProduct(p)
         if (p.category?.slug) {
           fetchProducts({ category: p.category.slug })
@@ -74,7 +83,8 @@ export function ProductDetail() {
     )
   }
 
-  if (!product) return <ProductDetailShimmer />
+  // URL slug updates before useEffect clears state — avoid one frame of the previous product (image flicker).
+  if (!product || product.slug !== slug) return <ProductDetailShimmer />
 
   const title = isAr ? product.nameAr : product.name
   const desc = isAr ? product.descriptionAr : product.description
