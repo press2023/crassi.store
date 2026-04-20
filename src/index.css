@@ -3,12 +3,18 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * تكديس الخطوط: اللاتيني أولاً ثم Tajawal.
+   * المتصفح يختار حرفاً حرفاً — اللاتينية من Source Sans، العربية من Tajawal
+   * (Tajawal لا يُعتمد لرسم اللاتينية).
+   */
   html {
     @apply antialiased;
   }
   body {
     @apply min-h-screen text-victorian-900 dark:text-cream-100;
-    font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
+    font-family: 'Source Sans 3', 'Tajawal', system-ui, -apple-system, sans-serif;
+    letter-spacing: 0.045em;
     background-color: #fbf7f1;
     background-image:
       radial-gradient(circle at 10% 5%, rgba(176, 122, 56, 0.07) 0, transparent 45%),
@@ -23,20 +29,52 @@
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g fill='none' stroke='%23d9b87e' stroke-opacity='0.04' stroke-width='1'><path d='M60 4 L64 28 L88 24 L70 40 L96 56 L70 64 L80 92 L60 78 L40 92 L50 64 L24 56 L50 40 L32 24 L56 28 Z'/></g></svg>");
   }
   :lang(ar) {
-    font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
+    font-family: 'Source Sans 3', 'Tajawal', system-ui, -apple-system, sans-serif;
   }
   h1, h2, h3, h4 {
-    font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
-    letter-spacing: 0;
+    font-family: 'Cormorant Garamond', 'Tajawal', Georgia, 'Times New Roman', serif;
+    letter-spacing: 0.08em;
   }
 
-  /* العربية لا تدعم uppercase ولا تتناسب مع tracking الكبير، نُلغي ذلك */
+  /* واجهة عربية: تباعد حروف أوضح + إلغاء uppercase (لا يناسب العربية) */
+  html[dir='rtl'] body,
+  :lang(ar) body {
+    letter-spacing: 0.065em;
+  }
+
   html[dir="rtl"] *,
   :lang(ar) * {
     text-transform: none !important;
-    letter-spacing: 0 !important;
     font-style: normal !important;
-    font-family: 'Tajawal', system-ui, -apple-system, sans-serif !important;
+    font-family: 'Source Sans 3', 'Tajawal', system-ui, -apple-system, sans-serif !important;
+  }
+
+  /*
+   * الإنجليزية: إلغاء ALL CAPS من Tailwind (النص كما في i18n).
+   */
+  html[lang='en'] .uppercase {
+    text-transform: none;
+  }
+
+  /*
+   * الإنجليزية: تباعد أضيق — النص اللاتيني مع letter-spacing العام يبدو «حروف بعيدة» بلا داعٍ.
+   */
+  html[lang='en'] body {
+    letter-spacing: normal;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  html[lang='en'] h1,
+  html[lang='en'] h2,
+  html[lang='en'] h3,
+  html[lang='en'] h4 {
+    letter-spacing: 0.02em;
+  }
+
+  html[lang='en'] .font-display {
+    letter-spacing: 0.035em;
   }
 }
 

@@ -1,9 +1,19 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { requireAdmin, requirePermission } from '../lib/auth.js'
+import { deleteStoredObjectByUrl, deleteStoredObjectsByUrls } from '../lib/storage.js'
 
 const router = Router()
 router.use(requireAdmin)
+
+const MAX_PRODUCT_IMAGES = 4
+
+function parseProductImageUrls(images: unknown): string[] | 'invalid' | 'too_many' {
+  if (!Array.isArray(images)) return 'invalid'
+  const urls = images.map((u) => String(u).trim()).filter((u) => u.length > 0)
+  if (urls.length > MAX_PRODUCT_IMAGES) return 'too_many'
+  return urls
+}
 
 // ── Categories ──────────────────────────────────────────
 
@@ -39,6 +49,12 @@ router.post('/categories', requirePermission('categories'), async (req, res) => 
 router.put('/categories/:id', requirePermission('categories'), async (req, res) => {
   const b = req.body as { name?: string; nameAr?: string; image?: string | null; slug?: string }
   try {
+    const prev = await prisma.category.findUnique({
+      where: { id: req.params.id },
+      select: { image: true },
+    })
+    if (!prev) return res.status(404).json({ error: 'not_found' })
+
     const row = await prisma.category.update({
       where: { id: req.params.id },
       data: {
@@ -48,6 +64,9 @@ router.put('/categories/:id', requirePermission('categories'), async (req, res) 
         ...(b.image !== undefined ? { image: b.image ? String(b.image) : null } : {}),
       },
     })
+    if (prev.image && prev.image !== row.image) {
+      await deleteStoredObjectByUrl(prev.image)
+    }
     res.json(row)
   } catch {
     res.status(404).json({ error: 'not_found' })
@@ -56,8 +75,18 @@ router.put('/categories/:id', requirePermission('categories'), async (req, res) 
 
 router.delete('/categories/:id', requirePermission('categories'), async (req, res) => {
   try {
-    // مع onDelete: Cascade سيُحذف المنتجات المرتبطة تلقائياً
+    const existing = await prisma.category.findUnique({
+      where: { id: req.params.id },
+      include: { products: { select: { images: true } } },
+    })
+    if (!existing) return res.status(404).json({ error: 'not_found' })
+
+    const urls: string[] = []
+    if (existing.image) urls.push(existing.image)
+    for (const p of existing.products) urls.push(...p.images)
+
     await prisma.category.delete({ where: { id: req.params.id } })
+    await deleteStoredObjectsByUrls(urls)
     res.json({ ok: true })
   } catch (e) {
     console.error(e)
@@ -90,6 +119,13 @@ router.post('/products', requirePermission('products'), async (req, res) => {
   ) {
     return res.status(400).json({ error: 'missing_fields' })
   }
+  let productImages: string[] = []
+  if (b.images != null) {
+    const parsed = parseProductImageUrls(b.images)
+    if (parsed === 'invalid') return res.status(400).json({ error: 'invalid_images' })
+    if (parsed === 'too_many') return res.status(400).json({ error: 'too_many_images' })
+    productImages = parsed
+  }
   try {
     const row = await prisma.product.create({
       data: {
@@ -99,7 +135,7 @@ router.post('/products', requirePermission('products'), async (req, res) => {
         description: (b.description ?? '').trim(),
         descriptionAr: (b.descriptionAr ?? '').trim(),
         price: b.price,
-        images: b.images ?? [],
+        images: productImages,
         sizes: b.sizes ?? [],
         stock: b.stock ?? 0,
         featured: b.featured ?? false,
@@ -120,6 +156,20 @@ router.post('/products', requirePermission('products'), async (req, res) => {
 router.put('/products/:id', requirePermission('products'), async (req, res) => {
   const b = req.body as Record<string, unknown>
   try {
+    const prev = await prisma.product.findUnique({
+      where: { id: req.params.id },
+      select: { images: true },
+    })
+    if (!prev) return res.status(404).json({ error: 'not_found' })
+
+    let imagesPatch: string[] | undefined
+    if (b.images != null) {
+      const parsed = parseProductImageUrls(b.images)
+      if (parsed === 'invalid') return res.status(400).json({ error: 'invalid_images' })
+      if (parsed === 'too_many') return res.status(400).json({ error: 'too_many_images' })
+      imagesPatch = parsed
+    }
+
     const row = await prisma.product.update({
       where: { id: req.params.id },
       data: {
@@ -128,7 +178,7 @@ router.put('/products/:id', requirePermission('products'), async (req, res) => {
         ...(b.description != null ? { description: String(b.description) } : {}),
         ...(b.descriptionAr != null ? { descriptionAr: String(b.descriptionAr) } : {}),
         ...(b.price != null ? { price: Number(b.price) } : {}),
-        ...(b.images != null ? { images: b.images as string[] } : {}),
+        ...(imagesPatch != null ? { images: imagesPatch } : {}),
         ...(b.sizes != null ? { sizes: b.sizes as string[] } : {}),
         ...(b.stock != null ? { stock: Number(b.stock) } : {}),
         ...(b.featured != null ? { featured: Boolean(b.featured) } : {}),
@@ -136,6 +186,8 @@ router.put('/products/:id', requirePermission('products'), async (req, res) => {
       },
       include: { category: true },
     })
+    const removed = prev.images.filter((u) => !row.images.includes(u))
+    await deleteStoredObjectsByUrls(removed)
     res.json(row)
   } catch {
     res.status(404).json({ error: 'not_found' })
@@ -144,7 +196,13 @@ router.put('/products/:id', requirePermission('products'), async (req, res) => {
 
 router.delete('/products/:id', requirePermission('products'), async (req, res) => {
   try {
+    const prev = await prisma.product.findUnique({
+      where: { id: req.params.id },
+      select: { images: true },
+    })
+    if (!prev) return res.status(404).json({ error: 'not_found' })
     await prisma.product.delete({ where: { id: req.params.id } })
+    await deleteStoredObjectsByUrls(prev.images)
     res.json({ ok: true })
   } catch {
     res.status(404).json({ error: 'not_found' })
@@ -158,7 +216,13 @@ router.post('/products/bulk-delete', requirePermission('products'), async (req, 
     return res.status(400).json({ error: 'no_ids' })
   }
   try {
+    const toRemove = await prisma.product.findMany({
+      where: { id: { in: ids } },
+      select: { images: true },
+    })
+    const urls = toRemove.flatMap((p) => p.images)
     const result = await prisma.product.deleteMany({ where: { id: { in: ids } } })
+    await deleteStoredObjectsByUrls(urls)
     res.json({ ok: true, count: result.count })
   } catch (e) {
     console.error(e)
@@ -267,6 +331,11 @@ router.post('/orders/bulk-delete', requirePermission('orders'), async (req, res)
 router.put('/settings', requirePermission('site_settings'), async (req, res) => {
   const body = req.body as Record<string, string | null | undefined>
   try {
+    const oldHero =
+      'heroImage' in body
+        ? ((await prisma.setting.findUnique({ where: { key: 'heroImage' } }))?.value ?? null)
+        : null
+
     for (const [key, value] of Object.entries(body)) {
       if (value === null || value === undefined || value === '') {
         await prisma.setting.deleteMany({ where: { key } })
@@ -278,6 +347,14 @@ router.put('/settings', requirePermission('site_settings'), async (req, res) => 
         })
       }
     }
+
+    if ('heroImage' in body) {
+      const newHero = (await prisma.setting.findUnique({ where: { key: 'heroImage' } }))?.value ?? null
+      if (oldHero && oldHero !== newHero) {
+        await deleteStoredObjectByUrl(oldHero)
+      }
+    }
+
     const rows = await prisma.setting.findMany()
     const map: Record<string, string> = {}
     for (const r of rows) map[r.key] = r.value

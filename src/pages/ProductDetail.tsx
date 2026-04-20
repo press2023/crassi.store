@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Check, ChevronRight, Home, Minus, Package, Plus, ShoppingBag, Share2 } from 'lucide-react'
+import { Check, ChevronRight, Home, Minus, Plus, ShoppingBag, Share2 } from 'lucide-react'
 import { fetchProductBySlug, fetchProducts } from '../api'
 import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -161,58 +161,35 @@ export function ProductDetail() {
           </div>
 
         {/* Info */}
-        <div className="md:w-1/2 lg:w-7/12 flex flex-col pt-2 lg:pt-4">
-          {/* Title */}
-          <div className="mt-2 flex items-start justify-between gap-4">
-            <h1 className="font-display text-2xl font-bold leading-tight text-victorian-900 dark:text-cream-50 sm:text-3xl lg:text-4xl">
-              {title}
-            </h1>
-            <button
-              type="button"
-              onClick={handleShare}
-              title={isAr ? 'مشاركة' : 'Share'}
-              className="mt-1 flex shrink-0 items-center justify-center rounded-full border border-victorian-200 bg-cream-50 p-2.5 text-victorian-500 shadow-sm transition hover:border-burgundy-300 hover:text-burgundy-700 dark:border-victorian-800 dark:bg-victorian-900/50 dark:text-victorian-400 dark:hover:border-victorian-700 dark:hover:text-cream-100"
-            >
-              <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
-            </button>
+        <div className="-mt-4 flex flex-col pt-0 md:-mt-6 md:w-1/2 lg:w-7/12 lg:-mt-7">
+          <h1 className="font-display text-2xl font-bold leading-tight text-victorian-900 dark:text-cream-50 sm:text-3xl lg:text-4xl">
+            {title}
+          </h1>
+
+          <div className="mt-4 flex items-baseline gap-2" dir={isAr ? 'rtl' : 'ltr'}>
+            <span className="font-display text-3xl font-bold text-burgundy-700 dark:text-victorian-300 sm:text-4xl">
+              {Number(product.price).toLocaleString()}
+            </span>
+            <span className="font-display text-sm font-semibold uppercase tracking-widest text-victorian-500">
+              {isAr ? 'د.ع' : 'IQD'}
+            </span>
           </div>
 
-          {/* Price block */}
-          <div className="mt-4 rounded-lg border border-victorian-300 px-4 py-3 dark:border-victorian-700">
-            <p className="mb-1 font-display text-[11px] font-semibold uppercase tracking-[0.25em] text-victorian-500">
-              {isAr ? 'السعر' : 'Price'}
-            </p>
-            <div className="flex items-baseline gap-2" dir={isAr ? 'rtl' : 'ltr'}>
-              <span className="font-display text-3xl font-bold text-burgundy-700 dark:text-victorian-300 sm:text-4xl">
-                {Number(product.price).toLocaleString()}
-              </span>
-              <span className="font-display text-sm font-semibold uppercase tracking-widest text-victorian-500">
-                {isAr ? 'د.ع' : 'IQD'}
-              </span>
-            </div>
-          </div>
-
-          {/* Stock badge */}
           <div className="mt-4">
             {canBuy ? (
-              <div className="inline-flex items-center gap-2 rounded-full border border-victorian-300 bg-victorian-100 px-3 py-1 text-xs font-semibold text-victorian-700 dark:border-victorian-700 dark:bg-victorian-900/30 dark:text-victorian-300">
-                <Package className="h-3.5 w-3.5" />
-                <span>
-                  {isAr ? 'متوفر' : 'In stock'} — {product.stock} {isAr ? 'قطعة' : 'units'}
-                </span>
+              <div className="inline-flex items-center rounded-xl border border-victorian-200 bg-transparent px-3 py-2 text-xs font-semibold text-victorian-800 shadow-sm dark:border-victorian-600 dark:bg-transparent dark:text-victorian-200">
+                {isAr ? 'متوفر' : 'In stock'} — {product.stock} {isAr ? 'قطعة' : 'units'}
               </div>
             ) : (
-              <div className="inline-flex items-center gap-2 rounded-full border border-burgundy-200 bg-burgundy-50 px-3 py-1 text-xs font-semibold text-burgundy-700 dark:border-burgundy-900/50 dark:bg-burgundy-900/20 dark:text-burgundy-300">
-                <Package className="h-3.5 w-3.5" />
-                <span>{t('outOfStock')}</span>
+              <div className="inline-flex items-center rounded-xl border border-burgundy-200 bg-burgundy-50 px-3 py-1.5 text-xs font-semibold text-burgundy-700 dark:border-burgundy-900/50 dark:bg-burgundy-900/20 dark:text-burgundy-300">
+                {t('outOfStock')}
               </div>
             )}
           </div>
 
-          {/* Sizes */}
           {canBuy && product.sizes.length > 0 && (
-            <div className="mt-6">
-              <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.25em] text-victorian-500">
+            <div className="mt-6 rounded-2xl bg-victorian-100/90 px-4 py-4 shadow-sm outline-none dark:bg-victorian-900/45 sm:px-5 sm:py-5">
+              <p className="mb-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-victorian-500 dark:text-victorian-400">
                 {isAr ? 'المقاس' : 'Size'}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -221,10 +198,10 @@ export function ProductDetail() {
                     key={s}
                     type="button"
                     onClick={() => setSelectedSize(s)}
-                    className={`rounded-full border-2 px-4 py-1.5 font-display text-sm font-semibold transition ${
+                    className={`rounded-xl border px-4 py-2 font-display text-sm font-semibold transition ${
                       selectedSize === s
-                        ? 'border-burgundy-700 bg-burgundy-700 text-cream-50 dark:border-victorian-300 dark:bg-victorian-300 dark:text-victorian-900'
-                        : 'border-victorian-300 text-victorian-700 hover:border-burgundy-700 dark:border-victorian-700 dark:text-cream-200 dark:hover:border-victorian-300'
+                        ? 'border-burgundy-700 bg-burgundy-700 text-cream-50 shadow-sm dark:border-victorian-300 dark:bg-victorian-300 dark:text-victorian-900'
+                        : 'border-victorian-300 bg-cream-50/60 text-victorian-700 hover:border-burgundy-600 dark:border-victorian-600 dark:bg-victorian-950/40 dark:text-cream-200 dark:hover:border-victorian-400'
                     }`}
                   >
                     {s}
@@ -234,102 +211,94 @@ export function ProductDetail() {
             </div>
           )}
 
-          {/* Quantity */}
-          {canBuy && (
-            <div className="mt-6">
-              <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.25em] text-victorian-500">
-                {isAr ? 'الكمية' : 'Quantity'}
-              </p>
-              <div className="flex items-center gap-3">
+          <div className="mt-12 flex items-center gap-3 sm:mt-14 md:mt-16" dir="ltr">
+            <button
+              type="button"
+              disabled={!canBuy || (product.sizes.length > 0 && !selectedSize)}
+              onClick={() => {
+                add({
+                  productId: product.id,
+                  slug: product.slug,
+                  name: product.name,
+                  nameAr: product.nameAr,
+                  image: images[0] ?? '',
+                  price: product.price,
+                  size: selectedSize,
+                  quantity: qty,
+                })
+                setAdded(true)
+                setTimeout(() => setAdded(false), 2000)
+              }}
+              className={`inline-flex min-h-0 flex-1 items-center justify-center gap-2 rounded-2xl border-2 py-3.5 font-display text-xs font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-40 sm:gap-2 sm:py-4 sm:text-sm sm:tracking-[0.18em] ${
+                added
+                  ? 'border-burgundy-700 bg-transparent text-burgundy-700 dark:border-victorian-300 dark:text-victorian-300'
+                  : product.sizes.length > 0 && !selectedSize
+                    ? 'border-victorian-300 bg-victorian-100 text-victorian-400 dark:border-victorian-700 dark:bg-victorian-800 dark:text-victorian-500'
+                    : 'border-burgundy-700 bg-burgundy-700 text-cream-50 hover:bg-burgundy-800'
+              }`}
+            >
+              {added ? (
+                <>
+                  <Check className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+                  <span className="truncate">{isAr ? 'تمت الإضافة' : 'Added'}</span>
+                </>
+              ) : product.sizes.length > 0 && !selectedSize ? (
+                <>
+                  <ShoppingBag className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+                  <span className="truncate">{isAr ? 'اختر مقاس أولاً' : 'Select a size first'}</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+                  <span className="truncate">{t('addToCart')}</span>
+                </>
+              )}
+            </button>
+
+            {canBuy && (
+              <div
+                className="flex shrink-0 items-center gap-1.5 rounded-full border-2 border-victorian-300 bg-cream-50/95 px-3 py-1 shadow-sm dark:border-victorian-600 dark:bg-victorian-950/70 sm:gap-2 sm:px-4 sm:py-1.5"
+                role="group"
+                aria-label={isAr ? 'الكمية' : 'Quantity'}
+              >
                 <button
                   type="button"
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
                   disabled={qty <= 1}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-victorian-300 text-victorian-700 transition hover:border-burgundy-700 hover:bg-burgundy-700 hover:text-cream-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-victorian-300 disabled:hover:bg-transparent disabled:hover:text-victorian-700 dark:border-victorian-700 dark:text-cream-200 dark:hover:border-victorian-300 dark:hover:bg-victorian-300 dark:hover:text-victorian-900"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-victorian-700 outline-none transition hover:bg-victorian-200/90 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 dark:text-cream-200 dark:hover:bg-victorian-800/90"
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-3.5 w-3.5" strokeWidth={2.5} />
                 </button>
-                <span className="w-8 text-center font-display text-lg font-bold text-victorian-900 dark:text-cream-50">
+                <span className="min-w-[2.25rem] px-2 text-center font-display text-base font-bold tabular-nums leading-none text-victorian-900 dark:text-cream-50 sm:min-w-[2.75rem] sm:px-3">
                   {qty}
                 </span>
                 <button
                   type="button"
                   onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
                   disabled={qty >= maxQty}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-victorian-300 text-victorian-700 transition hover:border-burgundy-700 hover:bg-burgundy-700 hover:text-cream-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-victorian-300 disabled:hover:bg-transparent disabled:hover:text-victorian-700 dark:border-victorian-700 dark:text-cream-200 dark:hover:border-victorian-300 dark:hover:bg-victorian-300 dark:hover:text-victorian-900"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-victorian-700 outline-none transition hover:bg-victorian-200/90 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 dark:text-cream-200 dark:hover:bg-victorian-800/90"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
                 </button>
-                <span className="text-xs text-victorian-500">
-                  {isAr ? `الحد الأقصى: ${maxQty}` : `Max: ${maxQty}`}
-                </span>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Total preview */}
-          {canBuy && qty > 1 && (
-            <div className="mt-5 flex items-center justify-between rounded-lg border border-victorian-300 px-4 py-3 dark:border-victorian-700">
-              <span className="text-xs uppercase tracking-wider text-victorian-500">
-                {isAr ? 'الإجمالي' : 'Subtotal'}
-              </span>
-              <span className="font-display text-lg font-bold text-burgundy-700 dark:text-victorian-300">
-                {(Number(product.price) * qty).toLocaleString()} {isAr ? 'د.ع' : 'IQD'}
-              </span>
-            </div>
-          )}
-
-          {/* Add to cart */}
           <button
             type="button"
-            disabled={!canBuy || (product.sizes.length > 0 && !selectedSize)}
-            onClick={() => {
-              add({
-                productId: product.id,
-                slug: product.slug,
-                name: product.name,
-                nameAr: product.nameAr,
-                image: images[0] ?? '',
-                price: product.price,
-                size: selectedSize,
-                quantity: qty,
-              })
-              setAdded(true)
-              setTimeout(() => setAdded(false), 2000)
-            }}
-            className={`mt-6 inline-flex w-full items-center justify-center gap-2 border-2 py-4 font-display text-sm font-bold uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-40 ${
-              added
-                ? 'border-burgundy-700 bg-transparent text-burgundy-700 dark:border-victorian-300 dark:text-victorian-300'
-                : product.sizes.length > 0 && !selectedSize
-          ? 'border-victorian-300 bg-victorian-100 text-victorian-400 dark:border-victorian-700 dark:bg-victorian-800 dark:text-victorian-500'
-          : 'border-burgundy-700 bg-burgundy-700 text-cream-50 hover:bg-burgundy-800'
-            }`}
+            onClick={handleShare}
+            className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-victorian-300 bg-cream-50/80 py-3.5 font-display text-sm font-semibold uppercase tracking-[0.15em] text-victorian-800 transition hover:border-burgundy-600 hover:text-burgundy-800 dark:border-victorian-600 dark:bg-victorian-900/40 dark:text-cream-200 dark:hover:border-victorian-400 dark:hover:text-cream-50 sm:mt-8 md:mt-9"
           >
-            {added ? (
-              <>
-                <Check className="h-5 w-5" />
-                {isAr ? 'تمت الإضافة' : 'Added'}
-              </>
-            ) : product.sizes.length > 0 && !selectedSize ? (
-              <>
-                <ShoppingBag className="h-5 w-5" />
-                {isAr ? 'اختر مقاس أولاً' : 'Select a size first'}
-              </>
-            ) : (
-              <>
-                <ShoppingBag className="h-5 w-5" />
-                {t('addToCart')}
-              </>
-            )}
+            <Share2 className="h-5 w-5" />
+            {isAr ? 'مشاركة' : 'Share'}
           </button>
 
-          {/* Description */}
           {desc && (
             <div className="mt-8 border-t border-victorian-200 pt-6 dark:border-victorian-800">
-              <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.25em] text-victorian-500">
+              <p className="mb-3 font-display text-xs font-semibold uppercase tracking-[0.25em] text-victorian-500 sm:text-[11px]">
                 {isAr ? 'الوصف' : 'Description'}
               </p>
-              <p className="whitespace-pre-line text-sm leading-relaxed text-victorian-700 dark:text-cream-200 sm:text-base">
+              <p className="whitespace-pre-line text-base leading-relaxed text-victorian-700 dark:text-cream-200 sm:text-lg">
                 {desc}
               </p>
             </div>

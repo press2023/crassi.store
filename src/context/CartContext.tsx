@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react'
 import type { CartLine } from '../types'
+import { DELIVERY_FEE_IQD } from '../lib/deliveryFee'
 
 const STORAGE = 'classi-cart'
 
@@ -29,6 +30,8 @@ type Ctx = {
   clear: () => void
   count: number
   subtotal: number
+  deliveryFee: number
+  grandTotal: number
 }
 
 const CartContext = createContext<Ctx | null>(null)
@@ -93,9 +96,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items],
   )
 
+  const deliveryFee = DELIVERY_FEE_IQD
+  const grandTotal = useMemo(() => subtotal + deliveryFee, [subtotal, deliveryFee])
+
   const value = useMemo(
-    () => ({ items, add, updateQty, remove, clear, count, subtotal }),
-    [items, add, updateQty, remove, clear, count, subtotal],
+    () => ({
+      items,
+      add,
+      updateQty,
+      remove,
+      clear,
+      count,
+      subtotal,
+      deliveryFee,
+      grandTotal,
+    }),
+    [items, add, updateQty, remove, clear, count, subtotal, deliveryFee, grandTotal],
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

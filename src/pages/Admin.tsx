@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
+import { uploadImageFile } from '../lib/uploadImage'
 import type { Category, Product } from '../types'
 
 const base = import.meta.env.VITE_API_BASE ?? ''
@@ -179,13 +180,15 @@ function AdminShimmer({ isAr }: { isAr: boolean }) {
 /* ─── Site Settings (Hero image) ─────────────────────── */
 
 function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
-  const [heroImage, setHeroImage] = useState<string>('')
+  const [heroUrl, setHeroUrl] = useState<string>('')
+  const [pendingHero, setPendingHero] = useState<{ file: File; preview: string } | null>(null)
+  const pendingHeroRef = useRef(pendingHero)
+  pendingHeroRef.current = pendingHero
   const [heroTitle, setHeroTitle] = useState<string>('')
   const [aboutTitleAr, setAboutTitleAr] = useState<string>('')
   const [aboutBodyAr, setAboutBodyAr] = useState<string>('')
   const [aboutTitleEn, setAboutTitleEn] = useState<string>('')
   const [aboutBodyEn, setAboutBodyEn] = useState<string>('')
-  const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -201,7 +204,7 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
         aboutTitleEn?: string
         aboutBodyEn?: string
       }) => {
-        setHeroImage(s.heroImage ?? '')
+        setHeroUrl(s.heroImage ?? '')
         setHeroTitle(s.heroTitle ?? '')
         setAboutTitleAr(s.aboutTitleAr ?? '')
         setAboutBodyAr(s.aboutBodyAr ?? '')
@@ -211,44 +214,47 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
       .catch(() => { /* ignore */ })
   }, [])
 
-  const uploadFile = async (file: File): Promise<string | null> => {
-    const reader = new FileReader()
-    const dataUrl = await new Promise<string>((resolve) => {
-      reader.onload = () => resolve(reader.result as string)
-      reader.readAsDataURL(file)
-    })
-    try {
-      const res = await fetch(`${base}/api/upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ data: dataUrl, filename: `hero-${Date.now()}` }),
-      })
-      if (res.ok) {
-        const { url } = (await res.json()) as { url: string }
-        return url
-      }
-    } catch { /* skip */ }
-    return null
-  }
+  useEffect(() => {
+    return () => {
+      const p = pendingHeroRef.current
+      if (p) URL.revokeObjectURL(p.preview)
+    }
+  }, [])
 
-  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPickHero = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
-    setUploading(true)
-    const url = await uploadFile(f)
-    setUploading(false)
+    if (pendingHero) URL.revokeObjectURL(pendingHero.preview)
+    setPendingHero({ file: f, preview: URL.createObjectURL(f) })
     if (fileRef.current) fileRef.current.value = ''
-    if (url) setHeroImage(url)
+  }
+
+  const clearHero = () => {
+    if (pendingHero) URL.revokeObjectURL(pendingHero.preview)
+    setPendingHero(null)
+    setHeroUrl('')
   }
 
   const save = async () => {
     setSaving(true)
     setMsg(null)
     try {
+      let heroImagePayload: string | null = heroUrl || null
+      if (pendingHero) {
+        const url = await uploadImageFile(base, token, pendingHero.file, `hero-${Date.now()}`)
+        if (!url) {
+          setMsg(isAr ? '✗ تعذر رفع صورة الهيرو' : '✗ Hero image upload failed')
+          setSaving(false)
+          return
+        }
+        URL.revokeObjectURL(pendingHero.preview)
+        setPendingHero(null)
+        heroImagePayload = url
+      }
       const res = await api('/api/admin/settings', token, {
         method: 'PUT',
         body: JSON.stringify({
-          heroImage: heroImage || null,
+          heroImage: heroImagePayload,
           heroTitle: heroTitle || null,
           aboutTitleAr: aboutTitleAr || null,
           aboutBodyAr: aboutBodyAr || null,
@@ -256,8 +262,11 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
           aboutBodyEn: aboutBodyEn || null,
         }),
       })
-      if (res.ok) setMsg(isAr ? '✓ تم الحفظ' : '✓ Saved')
-      else setMsg(isAr ? '✗ تعذر الحفظ' : '✗ Save failed')
+      if (res.ok) {
+        const map = (await res.json()) as Record<string, string>
+        setHeroUrl(map.heroImage ?? '')
+        setMsg(isAr ? '✓ تم الحفظ' : '✓ Saved')
+      } else setMsg(isAr ? '✗ تعذر الحفظ' : '✗ Save failed')
     } catch {
       setMsg(isAr ? '✗ خطأ في الشبكة' : '✗ Network error')
     }
@@ -278,8 +287,8 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
 
         <div className="flex flex-wrap items-start gap-4">
           <div className="h-36 w-64 shrink-0 overflow-hidden border border-victorian-300 bg-victorian-100 dark:border-victorian-700 dark:bg-victorian-900">
-            {heroImage ? (
-              <img src={heroImage} alt="" className="h-full w-full object-cover" />
+            {pendingHero?.preview || heroUrl ? (
+              <img src={pendingHero?.preview ?? heroUrl} alt="" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full items-center justify-center text-victorian-400">
                 <ImageIcon className="h-8 w-8" />
@@ -290,13 +299,20 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
           <div className="flex flex-col gap-2">
             <label className="inline-flex cursor-pointer items-center gap-2 border border-victorian-300 px-4 py-2 text-sm text-victorian-700 hover:bg-victorian-100 dark:border-victorian-700 dark:text-cream-200 dark:hover:bg-victorian-900">
               <ImagePlus className="h-4 w-4" />
-              {uploading ? '…' : (isAr ? (heroImage ? 'تغيير الصورة' : 'رفع صورة') : (heroImage ? 'Change image' : 'Upload image'))}
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} disabled={uploading} />
+              {isAr
+                ? (pendingHero || heroUrl ? 'تغيير الصورة' : 'اختيار صورة (تُرفع عند الحفظ)')
+                : (pendingHero || heroUrl ? 'Change image' : 'Pick image (uploads on save)')}
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickHero} />
             </label>
-            {heroImage && (
+            {pendingHero && (
+              <p className="text-xs text-victorian-500">
+                {isAr ? 'معاينة محلية — اضغط «حفظ التغييرات» لرفعها إلى التخزين.' : 'Local preview — click Save to upload to storage.'}
+              </p>
+            )}
+            {(heroUrl || pendingHero) && (
               <button
                 type="button"
-                onClick={() => setHeroImage('')}
+                onClick={clearHero}
                 className="inline-flex items-center gap-2 border border-burgundy-300 px-4 py-2 text-sm text-burgundy-700 hover:bg-burgundy-50 dark:border-burgundy-800 dark:text-burgundy-300 dark:hover:bg-burgundy-900/30"
               >
                 <Trash2 className="h-4 w-4" />
@@ -415,48 +431,58 @@ function CategoriesTab({ token, categories, isAr, reload }: { token: string; cat
   const [slug, setSlug] = useState('')
   const [name, setName] = useState('')
   const [nameAr, setNameAr] = useState('')
-  const [image, setImage] = useState<string>('')
+  const [newCatImage, setNewCatImage] = useState<{ file: File; preview: string } | null>(null)
+  const newCatImageRef = useRef(newCatImage)
+  newCatImageRef.current = newCatImage
   const [busy, setBusy] = useState(false)
-  const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const inp = 'mt-1 w-full border border-victorian-300 bg-cream-50 px-4 py-2 text-sm dark:border-victorian-700 dark:bg-victorian-950 dark:text-cream-100'
 
-  const uploadFile = async (file: File): Promise<string | null> => {
-    const reader = new FileReader()
-    const dataUrl = await new Promise<string>((resolve) => {
-      reader.onload = () => resolve(reader.result as string)
-      reader.readAsDataURL(file)
-    })
-    try {
-      const res = await fetch(`${base}/api/upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ data: dataUrl, filename: file.name.split('.')[0] }),
-      })
-      if (res.ok) {
-        const { url } = (await res.json()) as { url: string }
-        return url
-      }
-    } catch { /* skip */ }
-    return null
+  useEffect(() => {
+    return () => {
+      const p = newCatImageRef.current
+      if (p) URL.revokeObjectURL(p.preview)
+    }
+  }, [])
+
+  const onPickNewCategoryImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    if (newCatImage) URL.revokeObjectURL(newCatImage.preview)
+    setNewCatImage({ file: f, preview: URL.createObjectURL(f) })
+    if (fileRef.current) fileRef.current.value = ''
   }
 
-  const onPickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]; if (!f) return
-    setUploading(true)
-    const url = await uploadFile(f)
-    if (url) setImage(url)
-    setUploading(false)
+  const clearNewCategoryImage = () => {
+    if (newCatImage) URL.revokeObjectURL(newCatImage.preview)
+    setNewCatImage(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
   const add = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true)
+    e.preventDefault()
+    setBusy(true)
+    let imageUrl: string | null = null
+    if (newCatImage) {
+      const url = await uploadImageFile(base, token, newCatImage.file, newCatImage.file.name)
+      URL.revokeObjectURL(newCatImage.preview)
+      setNewCatImage(null)
+      imageUrl = url
+      if (!url) {
+        alert(isAr ? 'تعذر رفع صورة التصنيف.' : 'Category image upload failed.')
+        setBusy(false)
+        return
+      }
+    }
     await api('/api/admin/categories', token, {
       method: 'POST',
-      body: JSON.stringify({ slug, name: name || nameAr, nameAr, image: image || null }),
+      body: JSON.stringify({ slug, name: name || nameAr, nameAr, image: imageUrl }),
     })
-    setSlug(''); setName(''); setNameAr(''); setImage(''); await reload(); setBusy(false)
+    setSlug('')
+    setName('')
+    setNameAr('')
+    await reload()
+    setBusy(false)
   }
 
   const del = async (id: string) => {
@@ -474,6 +500,11 @@ function CategoriesTab({ token, categories, isAr, reload }: { token: string; cat
       body: JSON.stringify({ image: url }),
     })
     reload()
+  }
+
+  const uploadCategoryRowImage = async (file: File) => {
+    const url = await uploadImageFile(base, token, file, file.name)
+    return url
   }
 
   return (
@@ -494,22 +525,24 @@ function CategoriesTab({ token, categories, isAr, reload }: { token: string; cat
 
         <div className="block">
           <span className="text-xs text-victorian-500">{isAr ? 'صورة التصنيف (دائرية)' : 'Category image (circular)'}</span>
-          <div className="mt-2 flex items-center gap-3">
-            {image ? (
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            {newCatImage ? (
               <div className="relative h-16 w-16 overflow-hidden rounded-full border border-victorian-300">
-                <img src={image} alt="" className="h-full w-full object-cover" />
-                <button type="button" onClick={() => setImage('')}
+                <img src={newCatImage.preview} alt="" className="h-full w-full object-cover" />
+                <button type="button" onClick={clearNewCategoryImage}
                   className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition hover:opacity-100">
                   <X className="h-5 w-5 text-white" />
                 </button>
               </div>
             ) : (
               <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-full border-2 border-dashed border-victorian-300 text-victorian-500 hover:border-burgundy-600">
-                {uploading ? <span className="text-[10px]">…</span> : <ImagePlus className="h-5 w-5" />}
-                <input ref={fileRef} type="file" accept="image/*" onChange={onPickImage} className="hidden" disabled={uploading} />
+                <ImagePlus className="h-5 w-5" />
+                <input ref={fileRef} type="file" accept="image/*" onChange={onPickNewCategoryImage} className="hidden" />
               </label>
             )}
-            <p className="text-xs text-victorian-500">{isAr ? 'PNG/JPG — مربع يُفضل' : 'PNG/JPG — square preferred'}</p>
+            <p className="text-xs text-victorian-500">
+              {isAr ? 'تُرفع عند إضافة التصنيف — ليست إلى R2 قبل الحفظ.' : 'Uploads when you add the category — not to R2 until submit.'}
+            </p>
           </div>
         </div>
 
@@ -524,12 +557,12 @@ function CategoriesTab({ token, categories, isAr, reload }: { token: string; cat
           <CategoryRow
             key={c.id}
             category={c}
+            isAr={isAr}
             onDelete={() => del(c.id)}
-            onUpload={async (file) => {
-              setUploading(true)
-              const url = await uploadFile(file)
-              setUploading(false)
+            onApplyUpload={async (file) => {
+              const url = await uploadCategoryRowImage(file)
               if (url) await updateImage(c.id, url)
+              else alert(isAr ? 'تعذر الرفع.' : 'Upload failed.')
             }}
             onRemoveImage={() => updateImage(c.id, null)}
           />
@@ -542,31 +575,60 @@ function CategoriesTab({ token, categories, isAr, reload }: { token: string; cat
 
 function CategoryRow({
   category,
+  isAr,
   onDelete,
-  onUpload,
+  onApplyUpload,
   onRemoveImage,
 }: {
   category: Category
+  isAr: boolean
   onDelete: () => void
-  onUpload: (file: File) => Promise<void>
+  onApplyUpload: (file: File) => Promise<void>
   onRemoveImage: () => void
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
+  const [pending, setPending] = useState<{ file: File; preview: string } | null>(null)
+  const pendingRef = useRef(pending)
+  pendingRef.current = pending
 
-  const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]; if (!f) return
-    setBusy(true)
-    await onUpload(f)
-    setBusy(false)
+  useEffect(() => {
+    return () => {
+      const p = pendingRef.current
+      if (p) URL.revokeObjectURL(p.preview)
+    }
+  }, [])
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    if (pending) URL.revokeObjectURL(pending.preview)
+    setPending({ file: f, preview: URL.createObjectURL(f) })
     if (ref.current) ref.current.value = ''
   }
 
+  const cancelPending = () => {
+    if (pending) URL.revokeObjectURL(pending.preview)
+    setPending(null)
+    if (ref.current) ref.current.value = ''
+  }
+
+  const apply = async () => {
+    if (!pending) return
+    setBusy(true)
+    await onApplyUpload(pending.file)
+    URL.revokeObjectURL(pending.preview)
+    setPending(null)
+    setBusy(false)
+  }
+
+  const displaySrc = pending?.preview ?? category.image
+
   return (
-    <li className="flex items-center gap-3 py-3">
+    <li className="flex flex-wrap items-center gap-3 py-3">
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-victorian-300 bg-victorian-100 dark:border-victorian-700 dark:bg-victorian-900">
-        {category.image ? (
-          <img src={category.image} alt="" className="h-full w-full object-cover" />
+        {displaySrc ? (
+          <img src={displaySrc} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-victorian-400">
             <Tag className="h-5 w-5" />
@@ -579,9 +641,21 @@ function CategoryRow({
       </div>
       <label className="inline-flex shrink-0 cursor-pointer items-center gap-1 border border-victorian-300 px-3 py-1.5 text-xs text-victorian-700 hover:bg-victorian-100 dark:border-victorian-700 dark:text-cream-200 dark:hover:bg-victorian-900">
         <ImagePlus className="h-3.5 w-3.5" />
-        {busy ? '…' : (category.image ? 'تحديث الصورة' : 'إضافة صورة')}
-        <input ref={ref} type="file" accept="image/*" className="hidden" onChange={handle} disabled={busy} />
+        {busy ? '…' : (isAr ? (pending ? 'تغيير الاختيار' : (category.image ? 'صورة جديدة' : 'اختيار صورة')) : (pending ? 'Change pick' : (category.image ? 'New image' : 'Pick image')))}
+        <input ref={ref} type="file" accept="image/*" className="hidden" onChange={onPick} disabled={busy} />
       </label>
+      {pending && (
+        <>
+          <button type="button" onClick={apply} disabled={busy}
+            className="shrink-0 border-2 border-burgundy-700 bg-burgundy-700 px-3 py-1.5 text-xs font-semibold text-cream-50 hover:bg-burgundy-800 disabled:opacity-50">
+            {isAr ? 'تطبيق' : 'Apply'}
+          </button>
+          <button type="button" onClick={cancelPending}
+            className="shrink-0 border border-victorian-300 px-2 py-1.5 text-xs text-victorian-600 dark:border-victorian-700">
+            {isAr ? 'إلغاء' : 'Cancel'}
+          </button>
+        </>
+      )}
       {category.image && (
         <button type="button" onClick={onRemoveImage}
           className="shrink-0 border border-victorian-300 p-2 text-victorian-500 hover:bg-victorian-100 dark:border-victorian-700 dark:hover:bg-victorian-900">

@@ -2,6 +2,12 @@
   command = "npm run build:client"
   publish = "dist"
 
+# Open Graph / Twitter cards for product links (static SPA otherwise has no per-product meta).
+# Set PUBLIC_API_ORIGIN (or SHARE_API_ORIGIN) in Netlify to your API base, e.g. https://your-app.up.railway.app
+[[edge_functions]]
+  path = "/product/*"
+  function = "product-meta"
+
 [[redirects]]
   from = "/api/*"
   to = "https://crassistore-production.up.railway.app/api/:splat"

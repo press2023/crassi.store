@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"tsx watch server/index.ts\"",
+    "dev:full": "prisma db push && concurrently -k \"vite\" \"tsx watch server/index.ts\"",
     "build": "vite build && prisma generate",
     "build:client": "vite build",
     "start": "npx prisma db push && tsx server/index.ts",

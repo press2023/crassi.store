@@ -10,12 +10,57 @@ import authRoutes from './routes/auth.js'
 import adminRoutes from './routes/admin.js'
 import uploadRoutes from './routes/upload.js'
 import settingsRoutes from './routes/settings.js'
+import { DELIVERY_FEE_IQD } from '../src/lib/deliveryFee.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const isProd = process.env.NODE_ENV === 'production'
 const PORT = Number(process.env.PORT) || 3001
 const distDir = path.join(__dirname, '..', 'dist')
+
+const STORE_OG_NAME = 'Victorian Store'
+
+/** Escape text for use inside HTML double-quoted attributes */
+function escapeHtmlAttr(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+function siteOriginFromReq(req: express.Request): string {
+  const fromEnv = (process.env.PUBLIC_SITE_URL || '').trim().replace(/\/$/, '')
+  if (fromEnv) return fromEnv
+  const rawProto = req.get('x-forwarded-proto') || req.protocol || 'https'
+  const proto = rawProto.split(',')[0].trim() || 'https'
+  const rawHost = req.get('x-forwarded-host') || req.get('host') || ''
+  const host = rawHost.split(',')[0].trim()
+  if (host) return `${proto}://${host}`
+  return 'http://localhost:3001'
+}
+
+/**
+ * Absolute URL for Open Graph images. Relative `/uploads/...` may be served from the API
+ * host (e.g. Railway) while the page is on Netlify — use PUBLIC_API_ORIGIN when set.
+ */
+function absoluteOgImageUrl(raw: string | undefined, pageOrigin: string, publicApiOrigin: string | null): string {
+  const base = pageOrigin.replace(/\/$/, '')
+  const fallback = `${base}/site-logo.jpg`
+  const img = (raw || '').trim()
+  if (!img) return fallback
+  if (/^https?:\/\//i.test(img)) return img
+  const pathPart = img.startsWith('/') ? img : `/${img}`
+  const uploadsOnApi = pathPart.startsWith('/uploads/')
+  const assetBase = (uploadsOnApi && publicApiOrigin ? publicApiOrigin : base).replace(/\/$/, '')
+  return `${assetBase}${pathPart}`
+}
+
+function stripDuplicateOgImageMeta(html: string): string {
+  return html
+    .replace(/<meta\s+[^>]*property=["']og:image["'][^>]*>\s*/gi, '')
+    .replace(/<meta\s+[^>]*name=["']twitter:image["'][^>]*>\s*/gi, '')
+}
 
 app.use(
   cors(
@@ -150,6 +195,8 @@ app.post('/api/orders', async (req, res) => {
         })
       }
 
+      total = total.add(new Prisma.Decimal(DELIVERY_FEE_IQD))
+
       const order = await tx.order.create({
         data: {
           customerName,
@@ -248,21 +295,30 @@ if (isProd) {
         if (slug) {
           const p = await prisma.product.findUnique({ where: { slug } })
           if (p) {
-            const title = String(p.nameAr || p.name).replace(/"/g, '&quot;')
-            const desc = String(p.descriptionAr || p.description || '').replace(/"/g, '&quot;')
-            const img = p.images[0] || ''
+            const pageOrigin = siteOriginFromReq(req)
+            const publicApiOrigin = (process.env.PUBLIC_API_ORIGIN || '').trim().replace(/\/$/, '') || null
+            const imgUrl = absoluteOgImageUrl(p.images[0], pageOrigin, publicApiOrigin)
+            const canonical = `${pageOrigin}${req.path}`
+            const titlePlain = String(p.nameAr || p.name)
+            const descPlain = String(p.descriptionAr || p.description || '')
             const priceStr = `${Number(p.price).toLocaleString()} IQD`
-            
+            const title = escapeHtmlAttr(titlePlain)
+            const desc = escapeHtmlAttr(`${priceStr} — ${descPlain}`.slice(0, 300))
+            const img = escapeHtmlAttr(imgUrl)
+            const canonicalEsc = escapeHtmlAttr(canonical)
             const metaTags = `
-              <meta property="og:title" content="${title} | Classi Store" />
-              <meta property="og:description" content="${priceStr} - ${desc}" />
+              <meta property="og:url" content="${canonicalEsc}" />
+              <meta property="og:title" content="${title} | ${STORE_OG_NAME}" />
+              <meta property="og:description" content="${desc}" />
               <meta property="og:image" content="${img}" />
               <meta property="og:type" content="product" />
               <meta name="twitter:card" content="summary_large_image" />
-              <meta name="twitter:title" content="${title} | Classi Store" />
-              <meta name="twitter:description" content="${priceStr} - ${desc}" />
+              <meta name="twitter:title" content="${title} | ${STORE_OG_NAME}" />
+              <meta name="twitter:description" content="${desc}" />
               <meta name="twitter:image" content="${img}" />
             `
+            html = stripDuplicateOgImageMeta(html)
+            html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtmlAttr(titlePlain)} | ${STORE_OG_NAME}</title>`)
             html = html.replace('</head>', `${metaTags}</head>`)
           }
         }
@@ -276,6 +332,17 @@ if (isProd) {
   })
 }
 
-app.listen(PORT, '::', () => {
+const httpServer = app.listen(PORT, '::', () => {
   console.log(`[classi] API ${isProd ? 'production' : 'dev'} on port ${PORT}`)
+})
+
+httpServer.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `[classi] المنفذ ${PORT} مستخدم (EADDRINUSE). أوقف العملية الأخرى التي تستخدمه (مثلاً نافذة dev قديمة) أو عيّن PORT=3002 في .env ثم حدّث vite.config proxy إن لزم.`,
+    )
+  } else {
+    console.error('[classi] خطأ في تشغيل الخادم:', err)
+  }
+  process.exit(1)
 })

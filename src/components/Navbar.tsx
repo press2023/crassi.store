@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { Languages, LogIn, MapPin, Menu, Moon, ShoppingBag, Sun, User } from 'lucide-react'
+import { Languages, LogIn, MapPin, Menu, Moon, Search, ShoppingBag, Sun, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -89,6 +89,18 @@ export function Navbar() {
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
 
+            <NavLink
+              to="/search"
+              className={({ isActive }) =>
+                `inline-flex p-2.5 text-victorian-800 hover:bg-victorian-100 dark:text-cream-200 dark:hover:bg-victorian-900 ${
+                  isActive ? 'text-burgundy-800 dark:text-victorian-300' : ''
+                }`
+              }
+              aria-label={t('searchPageTitle')}
+            >
+              <Search className="h-5 w-5" strokeWidth={2.25} />
+            </NavLink>
+
             <Link
               to="/cart"
               className="relative inline-flex items-center gap-1.5 p-2.5 text-victorian-800 hover:bg-victorian-100 dark:text-cream-200 dark:hover:bg-victorian-900"
@@ -113,6 +125,7 @@ export function Navbar() {
         <nav className="flex flex-col gap-1" onClick={closeMobile}>
           <NavLink to="/" className={linkClass} end>{t('navHome')}</NavLink>
           <NavLink to="/products" className={linkClass}>{t('navShop')}</NavLink>
+          <NavLink to="/search" className={linkClass}>{t('searchPageTitle')}</NavLink>
           <NavLink to="/about" className={linkClass}>{t('navAbout')}</NavLink>
           <NavLink to="/cart" className={linkClass}>
             {t('navCart')}

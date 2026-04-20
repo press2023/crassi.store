@@ -13,6 +13,7 @@ import { Login } from './pages/Login'
 import { NotFound } from './pages/NotFound'
 import { ProductDetail } from './pages/ProductDetail'
 import { Products } from './pages/Products'
+import { Search } from './pages/Search'
 import { TrackOrder } from './pages/TrackOrder'
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="products" element={<Products />} />
+        <Route path="search" element={<Search />} />
         <Route path="category/:slug" element={<CategoryPage />} />
         <Route path="product/:slug" element={<ProductDetail />} />
         <Route path="cart" element={<Cart />} />

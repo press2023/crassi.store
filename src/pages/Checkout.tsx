@@ -31,7 +31,7 @@ const inputClass =
 
 export function Checkout() {
   const { t, isAr } = useLanguage()
-  const { items, subtotal, clear } = useCart()
+  const { items, clear } = useCart()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [province, setProvince] = useState('')
@@ -129,9 +129,6 @@ export function Checkout() {
   return (
     <div className="mx-auto max-w-lg px-4 py-10">
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('checkout')}</h1>
-      <p className="mt-1 text-sm text-slate-400">
-        {t('subtotal')}: <strong className="text-slate-900 dark:text-white">{subtotal.toLocaleString()} IQD</strong>
-      </p>
 
       <form onSubmit={submit} className="mt-8 flex flex-col gap-4">
         <label className="block">

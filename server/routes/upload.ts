@@ -18,7 +18,7 @@ const isR2Enabled = Boolean(
     process.env.R2_ACCESS_KEY_ID &&
     process.env.R2_SECRET_ACCESS_KEY &&
     process.env.R2_BUCKET_NAME &&
-    process.env.R2_PUBLIC_URL
+    process.env.R2_PUBLIC_URL,
 )
 
 let s3Client: S3Client | null = null
@@ -57,14 +57,16 @@ router.post('/', async (req, res) => {
       try {
         const bucket = process.env.R2_BUCKET_NAME as string
         const publicUrl = process.env.R2_PUBLIC_URL as string
-        
-        await s3Client.send(new PutObjectCommand({
-          Bucket: bucket,
-          Key: r2Key,
-          Body: buffer,
-          ContentType: `image/${ext}`
-        }))
-        
+
+        await s3Client.send(
+          new PutObjectCommand({
+            Bucket: bucket,
+            Key: r2Key,
+            Body: buffer,
+            ContentType: `image/${ext}`,
+          }),
+        )
+
         const baseUrl = publicUrl.endsWith('/') ? publicUrl.slice(0, -1) : publicUrl
         return res.json({ url: `${baseUrl}/${r2Key}` })
       } catch (cloudErr) {
