@@ -5,65 +5,9 @@ import { fetchProductBySlug, fetchProducts } from '../api'
 import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
 import { ProductCard } from '../components/ProductCard'
-import { Bone, ProductCardShimmer } from '../components/Shimmer'
+import { ProductCardShimmer, ProductDetailShimmer } from '../components/Shimmer'
 import { ImageViewer } from '../components/ImageViewer'
 import type { Product } from '../types'
-
-function ProductDetailBodySkeleton({ isAr, similarTitle }: { isAr: boolean; similarTitle: string }) {
-  return (
-    <>
-      <nav className="mb-6 flex min-h-[1.25rem] items-center gap-1.5 text-sm text-victorian-500 dark:text-cream-300" dir={isAr ? 'rtl' : 'ltr'}>
-        <Link to="/" className="inline-flex shrink-0 items-center gap-1 transition hover:text-burgundy-700 dark:hover:text-victorian-300">
-          <Home className="h-3.5 w-3.5" />
-          <span>{isAr ? 'الرئيسية' : 'Home'}</span>
-        </Link>
-        <ChevronRight className={`h-3.5 w-3.5 shrink-0 opacity-70 ${isAr ? 'rotate-180' : ''}`} />
-        <Link to="/products" className="shrink-0 transition hover:text-burgundy-700 dark:hover:text-victorian-300">
-          {isAr ? 'المنتجات' : 'Products'}
-        </Link>
-        <ChevronRight className={`h-3.5 w-3.5 shrink-0 opacity-70 ${isAr ? 'rotate-180' : ''}`} />
-        <Bone className="h-4 min-w-0 max-w-[10rem] flex-1 rounded-md sm:max-w-[14rem]" />
-      </nav>
-
-      <div className="flex flex-col md:flex-row md:items-start gap-8 lg:gap-12">
-        <div className="md:w-1/2 lg:w-5/12">
-          <div className="aspect-[4/5] w-full animate-pulse rounded-2xl bg-victorian-200/90 dark:bg-victorian-800/90" />
-          <div className="mt-3 flex gap-2">
-            <Bone className="h-16 w-16 shrink-0 rounded-xl" />
-            <Bone className="h-16 w-16 shrink-0 rounded-xl" />
-            <Bone className="h-16 w-16 shrink-0 rounded-xl" />
-          </div>
-        </div>
-        <div className="-mt-4 flex w-full flex-col gap-4 pt-0 md:-mt-6 md:w-1/2 lg:w-7/12 lg:-mt-7">
-          <Bone className="h-9 w-full max-w-xl rounded-lg sm:h-11" />
-          <div className="flex items-baseline gap-2" dir={isAr ? 'rtl' : 'ltr'}>
-            <Bone className="h-10 w-36 rounded-lg sm:h-12 sm:w-44" />
-            <Bone className="h-4 w-12 rounded" />
-          </div>
-          <Bone className="h-9 w-40 rounded-xl" />
-          <Bone className="mt-4 h-14 w-full max-w-md rounded-2xl" />
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Bone className="h-10 w-14 rounded-full" />
-            <Bone className="h-10 w-14 rounded-full" />
-            <Bone className="h-10 w-14 rounded-full" />
-          </div>
-          <Bone className="mt-6 h-14 w-full rounded-2xl" />
-          <Bone className="mt-6 h-14 w-full rounded-2xl" />
-          <Bone className="mt-6 h-28 w-full rounded-xl" />
-        </div>
-      </div>
-
-      <section className="mt-16 border-t border-slate-100 pt-10 dark:border-slate-800">
-        <h2 className="mb-6 text-lg font-bold text-slate-900 dark:text-white">{similarTitle}</h2>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <ProductCardShimmer key={i} />
-          ))}
-        </div>
-      </section>
-    </>
-  )
-}
 
 export function ProductDetail() {
   const { slug } = useParams<{ slug: string }>()
@@ -139,13 +83,7 @@ export function ProductDetail() {
     )
   }
 
-  if (!product || product.slug !== slug) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
-        <ProductDetailBodySkeleton isAr={isAr} similarTitle={t('similarProducts')} />
-      </div>
-    )
-  }
+  if (!product || product.slug !== slug) return <ProductDetailShimmer />
 
   const title = isAr ? product.nameAr : product.name
   const desc = isAr ? product.descriptionAr : product.description
