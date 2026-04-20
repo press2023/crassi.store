@@ -32,7 +32,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b-2 border-victorian-400/40 bg-cream-50/95 shadow-sm backdrop-blur-md dark:border-victorian-700 dark:bg-victorian-950/95">
+      <header className="sticky top-0 z-40 border-b-2 border-victorian-400/40 bg-cream-50 pt-[env(safe-area-inset-top,0px)] shadow-sm backdrop-blur-md dark:border-victorian-700 dark:bg-victorian-950">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 md:gap-4">
           <div className="flex min-w-0 flex-1 items-center gap-2 md:flex-none md:gap-4">
             <button

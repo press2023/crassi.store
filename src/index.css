@@ -6,6 +6,11 @@
   /* الواجهة: Tajawal + خط النظام فقط */
   html {
     @apply antialiased;
+    background-color: #fbf7f1;
+    color-scheme: light dark;
+  }
+  html.dark {
+    background-color: #180d07;
   }
   body {
     @apply min-h-screen text-victorian-900 dark:text-cream-100;

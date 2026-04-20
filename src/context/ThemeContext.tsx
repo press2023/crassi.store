@@ -37,6 +37,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (theme === 'dark') root.classList.add('dark')
     else root.classList.remove('dark')
     localStorage.setItem(STORAGE, theme)
+
+    const metaTheme = document.getElementById('meta-theme-color') as HTMLMetaElement | null
+    if (metaTheme) {
+      metaTheme.content = theme === 'dark' ? '#180d07' : '#fbf7f1'
+    }
   }, [theme])
 
   const toggle = useCallback(() => {

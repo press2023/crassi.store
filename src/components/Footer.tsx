@@ -5,7 +5,7 @@ export function Footer() {
   const { isAr, t } = useLanguage()
 
   return (
-    <footer className="mt-10 border-t border-victorian-200/60 bg-cream-100/80 py-5 dark:border-victorian-800 dark:bg-victorian-950/70">
+    <footer className="mt-10 border-t border-victorian-200/60 bg-cream-100/80 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] dark:border-victorian-800 dark:bg-victorian-950/70">
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex flex-col items-center gap-2.5 text-center">
           <div>

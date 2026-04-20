@@ -3,15 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#2b1a0f" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#180d07" media="(prefers-color-scheme: dark)" />
+    <!-- يُحدَّث من ThemeContext ليتطابق مع الوضع الفاتح/الداكن (PWA آيفون) -->
+    <meta name="theme-color" content="#fbf7f1" id="meta-theme-color" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- default: شريط حالة نظامي يتناسق مع الخلفية الفاتحة وليس شريطاً شفافاً فارغاً -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Victorian" />
     <link rel="icon" type="image/jpeg" href="/site-logo.jpg" />
     <link rel="apple-touch-icon" href="/site-logo.jpg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover"
+    />
     <meta name="description" content="Victorian Store — متجر بروح العصر الفيكتوري" />
     <meta property="og:image" content="/site-logo.jpg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
