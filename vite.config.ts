@@ -28,7 +28,7 @@ function pwaGenerateSwPlugin(): Plugin {
       if (entryJs) precache.push(`/assets/${entryJs}`)
       if (entryCss) precache.push(`/assets/${entryCss}`)
 
-      const cacheName = 'victorian-store-v1'
+      const cacheName = 'victorian-store-v2'
       const precacheJson = JSON.stringify(precache)
       const cacheJson = JSON.stringify(cacheName)
 
@@ -61,6 +61,12 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // لا تخزن مؤقتاً: الـ API وملفات الرفع — يمنع تخزين index.html أو JSON خطأً كصورة
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).catch(() => caches.match('/index.html')));

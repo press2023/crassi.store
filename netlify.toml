@@ -8,6 +8,13 @@
   path = "/product/*"
   function = "product-meta"
 
+# نفس أصل الـ API — الصور المحفوظة تحت /uploads على الخادم وليست في dist
+[[redirects]]
+  from = "/uploads/*"
+  to = "https://crassistore-production.up.railway.app/uploads/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "https://crassistore-production.up.railway.app/api/:splat"
