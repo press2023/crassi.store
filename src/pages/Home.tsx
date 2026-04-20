@@ -14,6 +14,8 @@ export function Home() {
   const [featured, setFeatured] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [settings, setSettings] = useState<SiteSettings>({})
+  const [settingsLoading, setSettingsLoading] = useState(true)
+  const [heroImageBroken, setHeroImageBroken] = useState(false)
   const [loading, setLoading] = useState(true)
   const [catLoading, setCatLoading] = useState(true)
 
@@ -40,24 +42,40 @@ export function Home() {
 
   useEffect(() => {
     let ok = true
-    fetchSettings().then((s) => { if (ok) setSettings(s) })
-    return () => { ok = false }
+    fetchSettings()
+      .then((s) => {
+        if (ok) setSettings(s)
+      })
+      .catch(() => {
+        /* ignore */
+      })
+      .finally(() => {
+        if (ok) setSettingsLoading(false)
+      })
+    return () => {
+      ok = false
+    }
   }, [])
 
-  const heroImg = settings.heroImage
+  const heroImg = settings.heroImage?.trim()
+
+  useEffect(() => {
+    setHeroImageBroken(false)
+  }, [heroImg])
 
   return (
     <div>
-      {loading ? (
+      {settingsLoading ? (
         <HeroShimmer />
       ) : (
         <section className="relative flex min-h-[55vh] items-center justify-center overflow-hidden bg-victorian-950 sm:min-h-[70vh]">
-          {heroImg ? (
+          {heroImg && !heroImageBroken ? (
             <>
               <img
                 src={heroImg}
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
+                onError={() => setHeroImageBroken(true)}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
             </>
