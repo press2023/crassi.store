@@ -77,10 +77,10 @@ export default {
         },
       },
       fontFamily: {
-        /* لاتيني أولاً ثم Tajawal للعربية (بدون رسم لاتيني من Tajawal) */
-        sans: ['"Source Sans 3"', '"Tajawal"', 'system-ui', 'sans-serif'],
-        display: ['"Cormorant Garamond"', '"Tajawal"', 'Georgia', 'serif'],
-        body: ['"Source Sans 3"', '"Tajawal"', 'system-ui', 'sans-serif'],
+        /* الواجهة بالكامل: Tajawal فقط + احتياط النظام */
+        sans: ['"Tajawal"', 'system-ui', 'sans-serif'],
+        display: ['"Tajawal"', 'system-ui', 'sans-serif'],
+        body: ['"Tajawal"', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
         'vic-ornament':
