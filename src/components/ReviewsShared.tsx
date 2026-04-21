@@ -1,22 +1,15 @@
 import { useState } from 'react'
 import { Star, Trash2, User } from 'lucide-react'
 import type { Review } from '../api'
-import { formatDateNumeric } from '../lib/formatDigits'
+import { formatOrderDateTime } from '../lib/formatDigits'
 
-export function formatReviewDate(dateStr: string, isAr: boolean): string {
+/** تاريخ ووقت التعليق بتوقيت بغداد، مثل الطلبات (DD/MM/YYYY · 12 ساعة عربية بأرقام لاتينية) */
+export function formatReviewDate(dateStr: string): string {
   const d = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffHours / 24)
-  if (diffHours < 1) return isAr ? 'الآن' : 'just now'
-  if (diffHours < 24) {
-    return isAr ? `قبل ${diffHours} ساعة` : `${diffHours}h ago`
+  if (Number.isNaN(d.getTime())) {
+    return '—'
   }
-  if (diffDays < 30) {
-    return isAr ? `قبل ${diffDays} يوم` : `${diffDays}d ago`
-  }
-  return formatDateNumeric(d)
+  return formatOrderDateTime(d)
 }
 
 export function StarsDisplay({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg' }) {
@@ -111,7 +104,7 @@ export function ReviewCard({
             {review.name}
           </p>
           <p className="text-[11px] text-victorian-500">
-            {formatReviewDate(review.createdAt, isAr)}
+            {formatReviewDate(review.createdAt)}
           </p>
         </div>
         <StarsDisplay rating={review.rating} />

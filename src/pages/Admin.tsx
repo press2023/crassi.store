@@ -26,8 +26,8 @@ import { useLanguage } from '../context/LanguageContext'
 import {
   formatDateNumeric,
   formatNumberEn,
+  formatOrderDateTime,
   formatTimeArabic12Baghdad,
-  formatTimeHm,
 } from '../lib/formatDigits'
 import { uploadImageFile } from '../lib/uploadImage'
 import type { Category, Product } from '../types'
@@ -1086,7 +1086,7 @@ function ReviewsTab({ token, isAr }: { token: string; isAr: boolean }) {
               </div>
               <p className="whitespace-pre-wrap text-sm text-victorian-700 dark:text-cream-200">{r.comment}</p>
               <p className="text-[10px] text-victorian-400">
-                {formatDateNumeric(r.createdAt)} · {formatTimeHm(r.createdAt)}
+                {formatOrderDateTime(r.createdAt)}
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-stretch">
