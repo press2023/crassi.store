@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle, Clock, Package, Truck, XCircle } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
+import { formatNumberEn, formatOrderDateTime } from '../lib/formatDigits'
 
 const base = import.meta.env.VITE_API_BASE ?? ''
 const STORAGE_KEY = 'classi-orders'
@@ -125,7 +126,7 @@ export function TrackOrder() {
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-slate-400">
-                      {new Date(order.createdAt).toLocaleDateString(isAr ? 'ar-IQ' : 'en-US')} · {Number(order.total).toLocaleString()} IQD
+                      {formatOrderDateTime(order.createdAt)} · {formatNumberEn(Number(order.total))} IQD
                     </p>
                     <p className="mt-0.5 text-xs text-slate-400">
                       {order.items.length} {isAr ? 'منتج' : 'item(s)'}
@@ -183,14 +184,14 @@ export function TrackOrder() {
                             )}
                             <p className="text-xs text-slate-400">× {item.quantity}</p>
                           </div>
-                          <p className="shrink-0 text-xs font-medium text-slate-500">{Number(item.unitPrice).toLocaleString()} IQD</p>
+                          <p className="shrink-0 text-xs font-medium text-slate-500">{formatNumberEn(Number(item.unitPrice))} IQD</p>
                         </div>
                       ))}
                     </div>
 
                     <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
                       <span className="text-xs text-slate-400">{isAr ? 'المجموع' : 'Total'}</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{Number(order.total).toLocaleString()} IQD</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{formatNumberEn(Number(order.total))} IQD</span>
                     </div>
                   </div>
                 )}

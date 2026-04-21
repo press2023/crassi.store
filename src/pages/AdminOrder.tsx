@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
+import { formatDateNumeric, formatNumberEn, formatTimeArabic12Baghdad } from '../lib/formatDigits'
 import { CURRENCY } from '../i18n'
 
 const base = import.meta.env.VITE_API_BASE ?? ''
@@ -148,8 +149,8 @@ export function AdminOrder() {
 
   const currentStatus = STATUS_OPTIONS.find((s) => s.value === order.status) ?? STATUS_OPTIONS[0]
   const date = new Date(order.createdAt)
-  const dateStr = date.toLocaleDateString(isAr ? 'ar-IQ' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
-  const timeStr = date.toLocaleTimeString(isAr ? 'ar-IQ' : 'en-GB', { hour: '2-digit', minute: '2-digit' })
+  const dateStr = formatDateNumeric(date)
+  const timeStr = formatTimeArabic12Baghdad(date)
   const shortId = order.id.slice(-8).toUpperCase()
 
   return (
@@ -209,7 +210,7 @@ export function AdminOrder() {
               {isAr ? 'المجموع' : 'Total'}
             </p>
             <p className="mt-1 font-display text-2xl font-bold text-burgundy-700 dark:text-victorian-300 sm:text-3xl">
-              {Number(order.total).toLocaleString()} {CURRENCY}
+              {formatNumberEn(Number(order.total))} {CURRENCY}
             </p>
           </div>
         </div>
@@ -326,11 +327,11 @@ export function AdminOrder() {
                         {isAr ? 'الكمية' : 'Qty'}: <span className="font-semibold">{it.quantity}</span>
                       </p>
                       <p className="mt-0.5 text-xs text-victorian-500">
-                        {Number(it.unitPrice).toLocaleString()} × {it.quantity}
+                        {formatNumberEn(Number(it.unitPrice))} × {it.quantity}
                       </p>
                     </div>
                     <p className="shrink-0 text-sm font-bold text-victorian-900 dark:text-cream-100 sm:text-base">
-                      {line.toLocaleString()} {CURRENCY}
+                      {formatNumberEn(line)} {CURRENCY}
                     </p>
                   </li>
                 )
@@ -342,7 +343,7 @@ export function AdminOrder() {
                 {isAr ? 'المجموع الكلي' : 'Grand total'}
               </span>
               <span className="font-display text-xl font-bold text-burgundy-700 dark:text-victorian-300 sm:text-2xl">
-                {Number(order.total).toLocaleString()} {CURRENCY}
+                {formatNumberEn(Number(order.total))} {CURRENCY}
               </span>
             </div>
           </InfoCard>

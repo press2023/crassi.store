@@ -1,10 +1,7 @@
 import { Users } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
 import { useVisitorStats } from '../context/VisitorContext'
-
-function formatNumber(n: number, isAr: boolean): string {
-  return n.toLocaleString(isAr ? 'ar-IQ' : 'en-US')
-}
+import { formatNumberEn } from '../lib/formatDigits'
 
 const AVATAR_IMAGES = [
   { src: '/visitors-avatar-3.jpg', z: 'z-10' },
@@ -13,7 +10,7 @@ const AVATAR_IMAGES = [
 ] as const
 
 export function VisitorsPage() {
-  const { t, isAr } = useLanguage()
+  const { t } = useLanguage()
   const { unique } = useVisitorStats()
 
   return (
@@ -57,7 +54,7 @@ export function VisitorsPage() {
           {t('visitorsSiteCountLabel')}
         </p>
         <p className="mt-3 font-display text-4xl font-bold tabular-nums text-victorian-900 dark:text-cream-50 sm:text-5xl">
-          {formatNumber(unique, isAr)}
+          {formatNumberEn(unique)}
         </p>
         <p className="mt-2 text-xs text-victorian-500 dark:text-victorian-500">
           {t('visitorsUniqueHint')}

@@ -3,6 +3,7 @@ import { Minus, Plus, Truck, Trash2 } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
 import { DELIVERY_FEE_IQD } from '../lib/deliveryFee'
+import { formatNumberEn } from '../lib/formatDigits'
 
 export function Cart() {
   const { t, isAr } = useLanguage()
@@ -22,10 +23,7 @@ export function Cart() {
     )
   }
 
-  const notice = t('deliveryFeeNotice').replace(
-    '{amount}',
-    isAr ? String(DELIVERY_FEE_IQD) : DELIVERY_FEE_IQD.toLocaleString('en-US'),
-  )
+  const notice = t('deliveryFeeNotice').replace('{amount}', formatNumberEn(DELIVERY_FEE_IQD))
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -57,7 +55,7 @@ export function Cart() {
                 {isAr ? line.nameAr : line.name}
               </p>
               <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
-                {Number(line.price).toLocaleString()} IQD
+                {formatNumberEn(Number(line.price))} IQD
               </p>
               <div className="mt-3 flex items-center gap-2">
                 <button
@@ -93,19 +91,19 @@ export function Cart() {
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium text-slate-600 dark:text-slate-400">{t('subtotal')}</span>
           <span className="font-semibold text-slate-900 dark:text-white">
-            {subtotal.toLocaleString()} IQD
+            {formatNumberEn(subtotal)} IQD
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium text-slate-600 dark:text-slate-400">{t('deliveryFee')}</span>
           <span className="font-semibold text-slate-900 dark:text-white">
-            {deliveryFee.toLocaleString()} IQD
+            {formatNumberEn(deliveryFee)} IQD
           </span>
         </div>
         <div className="flex items-center justify-between border-t border-slate-200/90 pt-3 dark:border-slate-700">
           <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{t('grandTotal')}</span>
           <span className="text-lg font-bold text-slate-900 dark:text-white">
-            {grandTotal.toLocaleString()} IQD
+            {formatNumberEn(grandTotal)} IQD
           </span>
         </div>
       </div>

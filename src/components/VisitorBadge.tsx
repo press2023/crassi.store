@@ -1,10 +1,7 @@
 import { Users } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
 import { useVisitorStats } from '../context/VisitorContext'
-
-function formatNumber(n: number, isAr: boolean): string {
-  return n.toLocaleString(isAr ? 'ar-IQ' : 'en-US')
-}
+import { formatNumberEn } from '../lib/formatDigits'
 
 export function VisitorCounterCard() {
   const { isAr } = useLanguage()
@@ -20,7 +17,7 @@ export function VisitorCounterCard() {
           {isAr ? 'زوار المتجر' : 'Store visitors'}
         </p>
         <p className="mt-0.5 font-display text-2xl font-bold text-victorian-900 dark:text-cream-50">
-          {formatNumber(unique, isAr)}
+          {formatNumberEn(unique)}
           <span className="ms-1 text-xs font-normal text-victorian-500">
             {isAr ? 'زائر فريد' : 'unique'}
           </span>
@@ -28,8 +25,8 @@ export function VisitorCounterCard() {
         {total > unique && (
           <p className="text-[11px] text-victorian-500">
             {isAr
-              ? `${formatNumber(total, isAr)} زيارة إجمالًا`
-              : `${formatNumber(total, isAr)} total visits`}
+              ? `${formatNumberEn(total)} زيارة إجمالًا`
+              : `${formatNumberEn(total)} total visits`}
           </p>
         )}
       </div>

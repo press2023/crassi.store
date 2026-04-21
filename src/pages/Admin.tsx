@@ -23,6 +23,12 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
+import {
+  formatDateNumeric,
+  formatNumberEn,
+  formatTimeArabic12Baghdad,
+  formatTimeHm,
+} from '../lib/formatDigits'
 import { uploadImageFile } from '../lib/uploadImage'
 import type { Category, Product } from '../types'
 
@@ -810,7 +816,7 @@ function ProductsTab({ token, products, categories, isAr, reload }: { token: str
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-victorian-900 dark:text-cream-100">{p.nameAr}</p>
-                <p className="text-xs text-victorian-500">{Number(p.price).toLocaleString()} IQD · {p.category?.nameAr ?? ''}</p>
+                <p className="text-xs text-victorian-500">{formatNumberEn(Number(p.price))} IQD · {p.category?.nameAr ?? ''}</p>
               </div>
               <Link to={`/admin/product/${p.id}`}
                 className="shrink-0 border border-victorian-300 p-2 text-victorian-600 hover:bg-victorian-100 dark:border-victorian-700 dark:hover:bg-victorian-900">
@@ -894,8 +900,8 @@ function OrdersTab({ orders, isAr }: { token: string; orders: Order[]; isAr: boo
         {filtered.map((o) => {
           const statusInfo = STATUS_OPTIONS.find((s) => s.value === o.status) ?? STATUS_OPTIONS[0]
           const date = new Date(o.createdAt)
-          const dateStr = date.toLocaleDateString(isAr ? 'ar-IQ' : 'en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
-          const timeStr = date.toLocaleTimeString(isAr ? 'ar-IQ' : 'en-GB', { hour: '2-digit', minute: '2-digit' })
+          const dateStr = formatDateNumeric(date)
+          const timeStr = formatTimeArabic12Baghdad(date)
           const shortId = o.id.slice(-8).toUpperCase()
           const itemsPreview = o.items.slice(0, 3)
           const extraCount = Math.max(0, o.items.length - 3)
@@ -960,7 +966,7 @@ function OrdersTab({ orders, isAr }: { token: string; orders: Order[]; isAr: boo
                   {isAr ? 'المجموع' : 'Total'}
                 </span>
                 <span className="font-display text-base font-bold text-burgundy-700 dark:text-victorian-300">
-                  {Number(o.total).toLocaleString()} IQD
+                  {formatNumberEn(Number(o.total))} IQD
                 </span>
               </div>
             </Link>
@@ -1080,7 +1086,7 @@ function ReviewsTab({ token, isAr }: { token: string; isAr: boolean }) {
               </div>
               <p className="whitespace-pre-wrap text-sm text-victorian-700 dark:text-cream-200">{r.comment}</p>
               <p className="text-[10px] text-victorian-400">
-                {new Date(r.createdAt).toLocaleString(isAr ? 'ar-IQ' : 'en-US')}
+                {formatDateNumeric(r.createdAt)} · {formatTimeHm(r.createdAt)}
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-stretch">

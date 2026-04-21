@@ -305,7 +305,7 @@ if (isProd) {
             const canonical = `${pageOrigin}${req.path}`
             const titlePlain = String(p.nameAr || p.name)
             const descPlain = String(p.descriptionAr || p.description || '')
-            const priceStr = `${Number(p.price).toLocaleString()} IQD`
+            const priceStr = `${Number(p.price).toLocaleString('en-US')} IQD`
             const title = escapeHtmlAttr(titlePlain)
             const desc = escapeHtmlAttr(`${priceStr} — ${descPlain}`.slice(0, 300))
             const img = escapeHtmlAttr(imgUrl)

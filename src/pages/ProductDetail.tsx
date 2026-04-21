@@ -7,6 +7,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { ProductCard } from '../components/ProductCard'
 import { ProductCardShimmer, ProductDetailShimmer } from '../components/Shimmer'
 import { ImageViewer } from '../components/ImageViewer'
+import { formatNumberEn } from '../lib/formatDigits'
 import type { Product } from '../types'
 
 export function ProductDetail() {
@@ -177,7 +178,7 @@ export function ProductDetail() {
 
           <div className="mt-4 flex items-baseline gap-2" dir={isAr ? 'rtl' : 'ltr'}>
             <span className="font-display text-3xl font-bold text-burgundy-700 dark:text-victorian-300 sm:text-4xl">
-              {Number(product.price).toLocaleString()}
+              {formatNumberEn(Number(product.price))}
             </span>
             <span className="font-display text-sm font-semibold uppercase tracking-widest text-victorian-500">
               {isAr ? 'د.ع' : 'IQD'}

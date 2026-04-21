@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Star, Trash2, User } from 'lucide-react'
 import type { Review } from '../api'
+import { formatDateNumeric } from '../lib/formatDigits'
 
 export function formatReviewDate(dateStr: string, isAr: boolean): string {
   const d = new Date(dateStr)
@@ -15,11 +16,7 @@ export function formatReviewDate(dateStr: string, isAr: boolean): string {
   if (diffDays < 30) {
     return isAr ? `قبل ${diffDays} يوم` : `${diffDays}d ago`
   }
-  return d.toLocaleDateString(isAr ? 'ar-IQ' : 'en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDateNumeric(d)
 }
 
 export function StarsDisplay({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'lg' }) {

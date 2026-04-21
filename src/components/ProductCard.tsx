@@ -3,6 +3,7 @@ import { ShoppingCart } from 'lucide-react'
 import type { Product } from '../types'
 import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
+import { formatNumberEn } from '../lib/formatDigits'
 
 export function ProductCard({ product }: { product: Product }) {
   const { isAr } = useLanguage()
@@ -51,7 +52,7 @@ export function ProductCard({ product }: { product: Product }) {
         <p className="text-base font-medium text-victorian-900 dark:text-cream-100">{title}</p>
         <div className="flex items-center justify-between">
           <p className="text-xl font-bold text-burgundy-700 dark:text-cream-50">
-            {Number(product.price).toLocaleString()}{' '}
+            {formatNumberEn(Number(product.price))}{' '}
             <span className="text-sm font-medium text-victorian-600 dark:text-victorian-300">د.ع</span>
           </p>
           <button

@@ -71,7 +71,7 @@ export default async function productMeta(request: Request, context: { next: () 
   const canonical = `${pageOrigin}${url.pathname}`
   const titlePlain = String(product.nameAr || product.name || '')
   const descPlain = String(product.descriptionAr || product.description || '')
-  const priceStr = product.price ? `${Number(product.price).toLocaleString()} IQD` : ''
+  const priceStr = product.price ? `${Number(product.price).toLocaleString('en-US')} IQD` : ''
   const title = escapeHtmlAttr(titlePlain)
   const desc = escapeHtmlAttr(`${priceStr ? `${priceStr} — ` : ''}${descPlain}`.slice(0, 300))
   const img = escapeHtmlAttr(imgUrl)
