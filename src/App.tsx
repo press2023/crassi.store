@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ScrollToTop } from './components/ScrollToTop'
 import { About } from './pages/About'
@@ -15,6 +15,8 @@ import { ProductDetail } from './pages/ProductDetail'
 import { Products } from './pages/Products'
 import { Search } from './pages/Search'
 import { TrackOrder } from './pages/TrackOrder'
+import { ReviewsPage } from './pages/ReviewsPage'
+import { VisitorsPage } from './pages/VisitorsPage'
 
 export default function App() {
   return (
@@ -30,6 +32,9 @@ export default function App() {
         <Route path="cart" element={<Cart />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="about" element={<About />} />
+        <Route path="ratings" element={<Navigate to="/reviews" replace />} />
+        <Route path="reviews" element={<ReviewsPage />} />
+        <Route path="visitors" element={<VisitorsPage />} />
         <Route path="track" element={<TrackOrder />} />
         <Route path="login" element={<Login />} />
         <Route path="admin" element={<Admin />} />

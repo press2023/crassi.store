@@ -1,31 +1,43 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { Languages, LogIn, MapPin, Menu, Moon, Search, ShoppingBag, Sun, User } from 'lucide-react'
+import {
+  Home,
+  Info,
+  Languages,
+  LayoutGrid,
+  LogIn,
+  MapPin,
+  Menu,
+  Moon,
+  PanelLeft,
+  PanelLeftClose,
+  Search,
+  ShoppingBag,
+  Star,
+  Sun,
+  Eye,
+  User,
+} from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
+import { useSidebarLayout } from '../context/SidebarLayoutContext'
 import { MobileDrawer } from './MobileDrawer'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `block px-4 py-3 font-display text-sm font-semibold uppercase tracking-[0.2em] transition-colors ${
+  `flex items-center gap-3 px-4 py-4 font-display text-base font-semibold uppercase tracking-[0.18em] transition-colors sm:py-3.5 sm:text-sm sm:tracking-[0.2em] ${
     isActive
       ? 'bg-burgundy-700 text-cream-50'
       : 'text-victorian-800 hover:bg-victorian-100 dark:text-cream-200 dark:hover:bg-victorian-900'
   }`
 
-const linkClassDesktop = ({ isActive }: { isActive: boolean }) =>
-  `px-3 py-2 font-display text-xs font-semibold uppercase tracking-[0.25em] transition-colors ${
-    isActive
-      ? 'text-burgundy-800 underline underline-offset-[6px] decoration-victorian-500 decoration-2 dark:text-victorian-300'
-      : 'text-victorian-700 hover:text-burgundy-800 dark:text-cream-200 dark:hover:text-victorian-300'
-  }`
-
 export function Navbar() {
-  const { t, lang, setLang } = useLanguage()
+  const { t, lang, setLang, isAr } = useLanguage()
   const { theme, toggle } = useTheme()
   const { count } = useCart()
   const { isAdmin } = useAuth()
+  const { desktopCollapsed, toggleDesktopSidebar } = useSidebarLayout()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const closeMobile = () => setMobileOpen(false)
@@ -33,44 +45,47 @@ export function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b-2 border-victorian-400/40 bg-cream-50 pt-[env(safe-area-inset-top,0px)] shadow-sm backdrop-blur-md dark:border-victorian-700 dark:bg-victorian-950">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 md:gap-4">
-          <div className="flex min-w-0 flex-1 items-center gap-2 md:flex-none md:gap-4">
+        <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-3 md:max-w-none md:gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 md:hidden">
             <button
               type="button"
-              className="inline-flex shrink-0 p-2.5 text-victorian-700 hover:bg-victorian-100 dark:text-cream-200 dark:hover:bg-victorian-900 md:hidden"
+              className="inline-flex shrink-0 p-2.5 text-victorian-700 hover:bg-victorian-100 dark:text-cream-200 dark:hover:bg-victorian-900"
               onClick={() => setMobileOpen(true)}
               aria-label={t('navMenu')}
             >
               <Menu className="h-6 w-6" strokeWidth={2.25} />
             </button>
 
-            <Link to="/" onClick={closeMobile} className="flex min-w-0 flex-1 flex-col leading-tight md:flex-none">
-              <span className="truncate text-center font-display text-xl font-bold uppercase tracking-[0.2em] text-victorian-900 dark:text-cream-50 md:text-start">
+            <Link to="/" onClick={closeMobile} className="flex min-w-0 flex-1 flex-col leading-tight">
+              <span className="truncate text-center font-display text-xl font-bold uppercase tracking-[0.2em] text-victorian-900 dark:text-cream-50">
                 {t('brand')}
               </span>
               {t('tagline') ? (
-                <span className="truncate text-center font-body text-[11px] italic text-victorian-500 md:text-start">
+                <span className="truncate text-center font-body text-[11px] italic text-victorian-500">
                   {t('tagline')}
                 </span>
               ) : null}
             </Link>
           </div>
 
-          <nav className="hidden flex-1 items-center justify-center gap-1 lg:gap-2 md:flex">
-            <NavLink to="/" className={linkClassDesktop} end>{t('navHome')}</NavLink>
-            <NavLink to="/products" className={linkClassDesktop}>{t('navShop')}</NavLink>
-            <NavLink to="/about" className={linkClassDesktop}>{t('navAbout')}</NavLink>
-            <NavLink to="/track" className={linkClassDesktop}>
-              {lang === 'ar' ? 'تتبع طلبي' : 'Track order'}
-            </NavLink>
-            <NavLink to={isAdmin ? '/admin' : '/login'} className={linkClassDesktop}>
-              {isAdmin
-                ? (lang === 'ar' ? 'لوحة التحكم' : 'Dashboard')
-                : t('navLogin')}
-            </NavLink>
-          </nav>
+          <button
+            type="button"
+            onClick={toggleDesktopSidebar}
+            className="hidden shrink-0 rounded-lg p-2.5 text-victorian-700 hover:bg-victorian-100 dark:text-cream-200 dark:hover:bg-victorian-900 md:inline-flex"
+            title={desktopCollapsed ? t('sidebarExpand') : t('sidebarCollapse')}
+            aria-label={desktopCollapsed ? t('sidebarExpand') : t('sidebarCollapse')}
+            aria-expanded={!desktopCollapsed}
+          >
+            {desktopCollapsed ? (
+              <PanelLeft className={`h-5 w-5 ${isAr ? 'scale-x-[-1]' : ''}`} strokeWidth={2.25} />
+            ) : (
+              <PanelLeftClose className={`h-5 w-5 ${isAr ? 'scale-x-[-1]' : ''}`} strokeWidth={2.25} />
+            )}
+          </button>
 
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <div className="hidden min-w-0 flex-1 md:block" aria-hidden />
+
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2 ms-auto md:ms-0">
             <button
               type="button"
               onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
@@ -123,17 +138,35 @@ export function Navbar() {
         closeLabel={t('closeMenu')}
       >
         <nav className="flex flex-col gap-1" onClick={closeMobile}>
-          <NavLink to="/" className={linkClass} end>{t('navHome')}</NavLink>
-          <NavLink to="/products" className={linkClass}>{t('navShop')}</NavLink>
-          <NavLink to="/search" className={linkClass}>{t('searchPageTitle')}</NavLink>
-          <NavLink to="/about" className={linkClass}>{t('navAbout')}</NavLink>
+          <p className="px-2 py-1 font-display text-[10px] font-semibold uppercase tracking-[0.3em] text-victorian-400">
+            {t('sidebarSectionMain')}
+          </p>
+          <NavLink to="/" className={linkClass} end>
+            <Home className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
+            {t('navHome')}
+          </NavLink>
+          <NavLink to="/products" className={linkClass}>
+            <LayoutGrid className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
+            {t('navShop')}
+          </NavLink>
+          <NavLink to="/search" className={linkClass}>
+            <Search className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
+            {t('searchPageTitle')}
+          </NavLink>
+          <NavLink to="/about" className={linkClass}>
+            <Info className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
+            {t('navAbout')}
+          </NavLink>
           <NavLink to="/cart" className={linkClass}>
-            {t('navCart')}
-            {count > 0 && (
-              <span className="ms-2 rounded-full bg-burgundy-700 px-2 py-0.5 text-xs text-cream-50">
-                {count}
-              </span>
-            )}
+            <ShoppingBag className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
+            <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+              {t('navCart')}
+              {count > 0 ? (
+                <span className="rounded-full bg-burgundy-700 px-2 py-0.5 text-xs text-cream-50">
+                  {count}
+                </span>
+              ) : null}
+            </span>
           </NavLink>
         </nav>
 
@@ -174,6 +207,15 @@ export function Navbar() {
             {isAdmin ? <User className="h-5 w-5 shrink-0" /> : <LogIn className="h-5 w-5 shrink-0" />}
             {isAdmin ? (lang === 'ar' ? 'لوحة التحكم' : 'Dashboard') : t('navLogin')}
           </Link>
+          <div className="my-2 border-t border-victorian-200 dark:border-victorian-800" />
+          <NavLink to="/reviews" className={linkClass}>
+            <Star className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
+            {t('navRatingsAndReviews')}
+          </NavLink>
+          <NavLink to="/visitors" className={linkClass}>
+            <Eye className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
+            {t('navVisitors')}
+          </NavLink>
         </div>
       </MobileDrawer>
     </>

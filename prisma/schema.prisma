@@ -73,3 +73,26 @@ model OrderItem {
   unitPrice   Decimal @db.Decimal(10, 2)
   productName String
 }
+
+// زوار الموقع — كل زائر يُعرَّف بـ visitorId يُولَّد في المتصفح ويحفظ في localStorage
+// الزيارة المتكررة من نفس المتصفح تحدّث lastSeen فقط ولا تزيد العدّاد.
+model Visitor {
+  id        String   @id
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+  visits    Int      @default(1)
+  userAgent String?
+  ip        String?
+}
+
+// آراء الزبائن — اسم + تقييم بالنجوم (1..5) + تعليق
+model Review {
+  id          String   @id @default(cuid())
+  name        String
+  rating      Int
+  comment     String
+  createdAt   DateTime @default(now())
+  approved    Boolean  @default(true)
+  /// رمز سري يُعاد للمتصفح مرة واحدة عند الإنشاء — لحذف التعليق من دون تسجيل دخول
+  deleteToken String?  @unique
+}

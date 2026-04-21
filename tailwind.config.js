@@ -17,11 +17,16 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'classi-shimmer': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'classi-panel': 'classi-panel 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'classi-backdrop': 'classi-backdrop 0.2s ease-out forwards',
         'vic-fade': 'vic-fade 0.5s ease-out forwards',
+        'classi-shimmer': 'classi-shimmer 1.35s ease-in-out infinite',
       },
       colors: {
         /* ألوان العصر الفيكتوري: عنّابي عميق، ذهبي ملكي، كريمي، أخضر زمردي */

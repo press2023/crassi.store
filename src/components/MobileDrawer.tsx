@@ -9,6 +9,7 @@ type Props = {
   children: React.ReactNode
 }
 
+/** درج موبايل/تابلت: لوحة بعرض الشاشة كاملة مع خلفية بنفس ألوان الموقع. */
 export function MobileDrawer({ open, onClose, title, closeLabel, children }: Props) {
   const drawerRef = useRef<HTMLElement>(null)
 
@@ -33,7 +34,6 @@ export function MobileDrawer({ open, onClose, title, closeLabel, children }: Pro
       aria-modal="true"
       aria-label={title}
     >
-      {/* Overlay */}
       <button
         type="button"
         className="absolute inset-0 bg-black/50"
@@ -41,25 +41,28 @@ export function MobileDrawer({ open, onClose, title, closeLabel, children }: Pro
         aria-label={closeLabel}
       />
 
-      {/* Drawer */}
       <aside
         ref={drawerRef}
-        className={`absolute inset-y-0 start-0 flex h-full w-full flex-col bg-white transition-all duration-300 ease-out dark:bg-slate-950 ${
-          open ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0'
+        className={`absolute inset-y-0 start-0 flex h-full w-full max-w-none flex-col border-e-2 border-victorian-300/40 bg-cream-50 shadow-xl transition-opacity duration-300 ease-out dark:border-victorian-800 dark:bg-victorian-950 ${
+          open ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <div className="flex items-center justify-between px-4 py-4">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h2>
+        <div className="flex items-center justify-between border-b border-victorian-200 px-4 py-4 dark:border-victorian-800">
+          <h2 className="font-display text-lg font-bold uppercase tracking-[0.15em] text-victorian-900 dark:text-cream-50">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="rounded-full p-2.5 text-victorian-600 hover:bg-victorian-100 dark:text-cream-300 dark:hover:bg-victorian-900"
             aria-label={closeLabel}
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4">
+          {children}
+        </div>
       </aside>
     </div>
   )

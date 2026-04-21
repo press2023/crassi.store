@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   LogOut,
   MapPin,
+  MessageCircle,
   Package,
   Phone,
   Plus,
@@ -17,7 +18,6 @@ import {
   Tag,
   Trash2,
   Users,
-  Lock,
   Shield,
   X,
 } from 'lucide-react'
@@ -28,7 +28,7 @@ import type { Category, Product } from '../types'
 
 const base = import.meta.env.VITE_API_BASE ?? ''
 
-type Tab = 'categories' | 'products' | 'orders' | 'site' | 'admins'
+type Tab = 'categories' | 'products' | 'orders' | 'site' | 'reviews' | 'admins'
 
 type OrderItem = {
   id: string
@@ -69,6 +69,7 @@ export function Admin() {
     if (permissions.includes('products')) return 'products'
     if (permissions.includes('categories')) return 'categories'
     if (permissions.includes('site_settings')) return 'site'
+    if (permissions.includes('reviews')) return 'reviews'
     return 'orders'
   })
   const [categories, setCategories] = useState<Category[]>([])
@@ -129,6 +130,7 @@ export function Admin() {
         {(isSuperAdmin || permissions.includes('products')) && tabBtn('products', <Package className="h-4 w-4" />, isAr ? 'المنتجات' : 'Products')}
         {(isSuperAdmin || permissions.includes('categories')) && tabBtn('categories', <Tag className="h-4 w-4" />, isAr ? 'التصنيفات' : 'Categories')}
         {(isSuperAdmin || permissions.includes('site_settings')) && tabBtn('site', <ImageIcon className="h-4 w-4" />, isAr ? 'إعدادات الموقع' : 'Site')}
+        {(isSuperAdmin || permissions.includes('reviews')) && tabBtn('reviews', <MessageCircle className="h-4 w-4" />, isAr ? 'التعليقات' : 'Reviews')}
         {isSuperAdmin && tabBtn('admins', <Users className="h-4 w-4" />, isAr ? 'المشرفون' : 'Admins')}
       </div>
 
@@ -136,6 +138,7 @@ export function Admin() {
       {(isSuperAdmin || permissions.includes('products')) && tab === 'products' && <ProductsTab token={token!} products={products} categories={categories} isAr={isAr} reload={load} />}
       {(isSuperAdmin || permissions.includes('orders')) && tab === 'orders' && <OrdersTab token={token!} orders={orders} isAr={isAr} reload={load} />}
       {(isSuperAdmin || permissions.includes('site_settings')) && tab === 'site' && <SiteTab token={token!} isAr={isAr} />}
+      {(isSuperAdmin || permissions.includes('reviews')) && tab === 'reviews' && <ReviewsTab token={token!} isAr={isAr} />}
       {isSuperAdmin && tab === 'admins' && <AdminsTab token={token!} isAr={isAr} />}
     </div>
   )
@@ -974,6 +977,149 @@ function OrdersTab({ orders, isAr }: { token: string; orders: Order[]; isAr: boo
   )
 }
 
+/* ─── Reviews (moderation) ───────────────────────────── */
+
+type AdminReviewRow = {
+  id: string
+  name: string
+  rating: number
+  comment: string
+  approved: boolean
+  createdAt: string
+}
+
+function ReviewsTab({ token, isAr }: { token: string; isAr: boolean }) {
+  const [rows, setRows] = useState<AdminReviewRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await api('/api/reviews/admin/all', token)
+      if (res.ok) {
+        const data = (await res.json()) as AdminReviewRow[]
+        setRows(Array.isArray(data) ? data : [])
+      } else {
+        setRows([])
+      }
+    } catch {
+      setRows([])
+    }
+    setLoading(false)
+  }, [token])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const del = async (id: string) => {
+    if (!confirm(isAr ? 'حذف هذا التعليق نهائيًا؟' : 'Delete this review permanently?')) return
+    setBusyId(id)
+    try {
+      const res = await api(`/api/reviews/${id}`, token, { method: 'DELETE' })
+      if (res.ok) await load()
+      else alert(isAr ? 'تعذر الحذف' : 'Could not delete')
+    } catch {
+      alert(isAr ? 'خطأ في الشبكة' : 'Network error')
+    }
+    setBusyId(null)
+  }
+
+  const toggleApprove = async (id: string, approved: boolean) => {
+    setBusyId(id)
+    try {
+      const res = await api(`/api/reviews/${id}/approve`, token, {
+        method: 'PUT',
+        body: JSON.stringify({ approved }),
+      })
+      if (res.ok) {
+        const row = (await res.json()) as AdminReviewRow
+        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, approved: row.approved } : r)))
+      } else alert(isAr ? 'تعذر التحديث' : 'Update failed')
+    } catch {
+      alert(isAr ? 'خطأ في الشبكة' : 'Network error')
+    }
+    setBusyId(null)
+  }
+
+  if (loading) {
+    return <div className="py-8 text-center text-sm text-victorian-500">{isAr ? 'جاري التحميل...' : 'Loading...'}</div>
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-display font-bold text-victorian-900 dark:text-cream-50">
+          {isAr ? 'التعليقات والتقييمات' : 'Reviews & ratings'}
+        </h2>
+        <button
+          type="button"
+          onClick={() => load()}
+          className="text-xs font-semibold uppercase tracking-wider text-burgundy-700 hover:underline dark:text-victorian-300"
+        >
+          {isAr ? 'تحديث' : 'Refresh'}
+        </button>
+      </div>
+
+      <div className="divide-y divide-victorian-200 dark:divide-victorian-800 border border-victorian-200 dark:border-victorian-800 bg-cream-50 dark:bg-victorian-950/60">
+        {rows.map((r) => (
+          <div key={r.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-victorian-900 dark:text-cream-50">{r.name}</span>
+                <span className="text-amber-600 dark:text-amber-400" aria-label={`${r.rating}/5`}>
+                  {'★'.repeat(r.rating)}
+                  <span className="text-victorian-300 dark:text-victorian-600">{'★'.repeat(5 - r.rating)}</span>
+                </span>
+                {!r.approved && (
+                  <span className="rounded bg-victorian-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-victorian-800 dark:bg-victorian-800 dark:text-victorian-200">
+                    {isAr ? 'مخفي' : 'Hidden'}
+                  </span>
+                )}
+              </div>
+              <p className="whitespace-pre-wrap text-sm text-victorian-700 dark:text-cream-200">{r.comment}</p>
+              <p className="text-[10px] text-victorian-400">
+                {new Date(r.createdAt).toLocaleString(isAr ? 'ar-IQ' : 'en-US')}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-stretch">
+              <button
+                type="button"
+                disabled={busyId === r.id}
+                onClick={() => toggleApprove(r.id, !r.approved)}
+                className="border border-victorian-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-victorian-700 hover:bg-victorian-100 disabled:opacity-50 dark:border-victorian-600 dark:text-cream-200 dark:hover:bg-victorian-900"
+              >
+                {r.approved
+                  ? isAr
+                    ? 'إخفاء عن العامة'
+                    : 'Hide from site'
+                  : isAr
+                    ? 'إظهار للعامة'
+                    : 'Show on site'}
+              </button>
+              <button
+                type="button"
+                disabled={busyId === r.id}
+                onClick={() => del(r.id)}
+                className="inline-flex items-center justify-center gap-1 border border-burgundy-400 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-burgundy-700 hover:bg-burgundy-50 disabled:opacity-50 dark:border-burgundy-800 dark:text-burgundy-300 dark:hover:bg-burgundy-950/40"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {isAr ? 'حذف' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        ))}
+        {rows.length === 0 && (
+          <p className="py-10 text-center text-sm text-victorian-400">
+            {isAr ? 'لا توجد تعليقات بعد' : 'No reviews yet'}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /* ─── Admins ─────────────────────────────────────────── */
 
 type AdminUser = { id: string; email: string; isSuperAdmin: boolean; permissions: string[]; createdAt: string }
@@ -995,6 +1141,7 @@ function AdminsTab({ token, isAr }: { token: string; isAr: boolean }) {
     { id: 'products', labelAr: 'المنتجات', labelEn: 'Products' },
     { id: 'categories', labelAr: 'التصنيفات', labelEn: 'Categories' },
     { id: 'site_settings', labelAr: 'إعدادات الموقع', labelEn: 'Site Settings' },
+    { id: 'reviews', labelAr: 'التعليقات والتقييمات', labelEn: 'Reviews & ratings' },
   ]
 
   const load = useCallback(async () => {

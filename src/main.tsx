@@ -14,6 +14,7 @@ import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
 import { LanguageProvider } from './context/LanguageContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { VisitorProvider } from './context/VisitorContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -22,7 +23,9 @@ createRoot(document.getElementById('root')!).render(
         <LanguageProvider>
           <AuthProvider>
             <CartProvider>
-              <App />
+              <VisitorProvider>
+                <App />
+              </VisitorProvider>
             </CartProvider>
           </AuthProvider>
         </LanguageProvider>

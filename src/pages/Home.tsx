@@ -6,6 +6,7 @@ import { fetchCategories, fetchProducts, fetchSettings } from '../api'
 import type { SiteSettings } from '../api'
 import { CategoryCircles } from '../components/CategoryCircles'
 import { ProductCard } from '../components/ProductCard'
+import { VisitorCounterCard } from '../components/VisitorBadge'
 import { ProductGridShimmer, HeroShimmer } from '../components/Shimmer'
 import type { Category, Product } from '../types'
 
@@ -145,6 +146,10 @@ export function Home() {
           <ProductGridShimmer count={4} />
         </section>
       )}
+
+      <section className="mx-auto max-w-6xl px-4 pb-4 pt-2">
+        <VisitorCounterCard />
+      </section>
     </div>
   )
 }

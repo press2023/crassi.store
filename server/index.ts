@@ -10,6 +10,8 @@ import authRoutes from './routes/auth.js'
 import adminRoutes from './routes/admin.js'
 import uploadRoutes from './routes/upload.js'
 import settingsRoutes from './routes/settings.js'
+import visitorsRoutes from './routes/visitors.js'
+import reviewsRoutes from './routes/reviews.js'
 import { DELIVERY_FEE_IQD } from '../src/lib/deliveryFee.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -74,6 +76,8 @@ app.use('/api/auth', authRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/settings', settingsRoutes)
+app.use('/api/visitors', visitorsRoutes)
+app.use('/api/reviews', reviewsRoutes)
 
 function serializeProduct(p: {
   price: { toString(): string }
