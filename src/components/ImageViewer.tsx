@@ -154,8 +154,10 @@ export function ImageViewer({ images, index, onClose, onPrev, onNext }: Props) {
   // مرجع لمدّة pointer
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
+    // لا تتدخّل في نقرات أزرار التحكّم (X / السابق / التالي)
+    if ((e.target as HTMLElement).closest('button')) return
     const target = overlayRef.current
-    if (target) target.setPointerCapture(e.pointerId)
+    try { if (target) target.setPointerCapture(e.pointerId) } catch { /* ignore */ }
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
     const pts = Array.from(pointersRef.current.values())
