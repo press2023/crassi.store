@@ -87,7 +87,26 @@ app.use(
   cors(
     isProd
       ? { origin: false }
-      : { origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173'] },
+      : {
+          origin: (origin, cb) => {
+            // اسمح بأي طلب بدون origin (مثل curl) أو من localhost / شبكة محلية (Wi-Fi) أثناء التطوير
+            if (!origin) return cb(null, true)
+            try {
+              const u = new URL(origin)
+              const host = u.hostname
+              const isLocal =
+                host === 'localhost' ||
+                host === '127.0.0.1' ||
+                host === '::1' ||
+                /^10\./.test(host) ||
+                /^192\.168\./.test(host) ||
+                /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+              return cb(null, isLocal)
+            } catch {
+              return cb(null, false)
+            }
+          },
+        },
   ),
 )
 app.use(express.json({ limit: '50mb' }))
@@ -667,6 +686,82 @@ if (isProd) {
             html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtmlAttr(titlePlain)} | ${STORE_OG_NAME}</title>`)
             html = html.replace(/<link\s+rel=["']canonical["'][^>]*>\s*/i, '')
             html = html.replace('</head>', `${metaTags}</head>`)
+          }
+        }
+      }
+      // ─── طلب (رابط مشاركة) ───────────────────────────────────
+      else if (req.path.startsWith('/order/')) {
+        const orderId = req.path.split('/')[2]
+        if (orderId) {
+          const ord = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+              items: {
+                include: { product: { select: { images: true } } },
+                take: 1,
+              },
+            },
+          })
+          if (ord) {
+            const statusMapAr: Record<string, string> = {
+              pending: 'قيد الانتظار',
+              confirmed: 'تم التأكيد',
+              shipped: 'تم الشحن',
+              delivered: 'تم التوصيل',
+              cancelled: 'ملغي',
+            }
+            const statusMapEn: Record<string, string> = {
+              pending: 'Pending',
+              confirmed: 'Confirmed',
+              shipped: 'Shipped',
+              delivered: 'Delivered',
+              cancelled: 'Cancelled',
+            }
+            const statusAr = statusMapAr[ord.status] || ord.status
+            const statusEn = statusMapEn[ord.status] || ord.status
+            const shortId = ord.id.slice(-8).toUpperCase()
+            const totalStr = `${Number(ord.total).toLocaleString('en-US')} د.ع`
+            const itemImg = ord.items[0]?.product?.images?.[0] || ''
+            const imgUrl = absoluteOgImageUrl(itemImg, pageOrigin, publicApiOrigin)
+            const canonical = `${pageOrigin}${req.path}`
+            const customerFirst = String(ord.customerName || '').split(' ')[0] || ''
+            const titlePlain = `طلب #${shortId} — ${statusAr}`
+            const descPlain = [
+              `الحالة: ${statusAr}`,
+              customerFirst ? `العميل: ${customerFirst}` : '',
+              `المحافظة: ${ord.province}${ord.city ? ' / ' + ord.city : ''}`,
+              `المجموع: ${totalStr}`,
+            ].filter(Boolean).join(' · ').slice(0, 300)
+
+            const title = escapeHtmlAttr(titlePlain)
+            const desc = escapeHtmlAttr(descPlain)
+            const img = escapeHtmlAttr(imgUrl)
+            const canonicalEsc = escapeHtmlAttr(canonical)
+
+            const metaTags = `
+              <link rel="canonical" href="${canonicalEsc}" data-ssr="1" />
+              <meta name="description" content="${desc}" data-ssr="1" />
+              <meta name="robots" content="noindex, nofollow" data-ssr="1" />
+              <meta property="og:url" content="${canonicalEsc}" data-ssr="1" />
+              <meta property="og:title" content="${title} | ${STORE_OG_NAME}" data-ssr="1" />
+              <meta property="og:description" content="${desc}" data-ssr="1" />
+              <meta property="og:image" content="${img}" data-ssr="1" />
+              <meta property="og:image:alt" content="${title}" data-ssr="1" />
+              <meta property="og:type" content="website" data-ssr="1" />
+              <meta property="og:site_name" content="${STORE_OG_NAME}" data-ssr="1" />
+              <meta property="og:locale" content="ar_IQ" data-ssr="1" />
+              <meta name="twitter:card" content="summary_large_image" data-ssr="1" />
+              <meta name="twitter:title" content="${title} | ${STORE_OG_NAME}" data-ssr="1" />
+              <meta name="twitter:description" content="${desc}" data-ssr="1" />
+              <meta name="twitter:image" content="${img}" data-ssr="1" />
+            `
+            html = stripDuplicateOgImageMeta(html)
+            html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtmlAttr(`${titlePlain} | ${STORE_OG_NAME_AR}`)} </title>`)
+            html = html.replace(/<link\s+rel=["']canonical["'][^>]*>\s*/i, '')
+            html = html.replace('</head>', `${metaTags}</head>`)
+
+            // (تنبيه استخدام customerEn لتلافي تحذير unused في حال عدم استخدامه لاحقاً)
+            void statusEn
           }
         }
       }

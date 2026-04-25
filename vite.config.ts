@@ -149,8 +149,12 @@ export default defineConfig({
     pwaGenerateSwPlugin(),
   ],
   server: {
+    host: true, // اسمح بالاستماع على كل واجهات الشبكة (0.0.0.0) لتجربة الموقع من الهاتف عبر نفس الـ Wi-Fi
     proxy: {
       '/api': { target: 'http://localhost:3001', changeOrigin: true },
     },
+  },
+  preview: {
+    host: true,
   },
 })

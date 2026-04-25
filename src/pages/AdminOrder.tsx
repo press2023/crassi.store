@@ -3,10 +3,12 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Calendar,
+  Check,
   ClipboardCopy,
   MapPin,
   Package,
   Phone,
+  Share2,
   StickyNote,
   Trash2,
   User,
@@ -66,6 +68,7 @@ export function AdminOrder() {
   const [deleting, setDeleting] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   const load = useCallback(async () => {
     if (!token || !id) return
@@ -126,6 +129,24 @@ export function AdminOrder() {
     setTimeout(() => setCopied(false), 1500)
   }
 
+  const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/order/${order.id}`
+  const shareLink = async () => {
+    const title = isAr ? `طلب #${order.id.slice(-8).toUpperCase()}` : `Order #${order.id.slice(-8).toUpperCase()}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, url: shareUrl })
+        return
+      }
+    } catch { /* المستخدم ألغى أو فشلت العملية */ }
+    try {
+      await navigator.clipboard?.writeText(shareUrl)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 1800)
+    } catch {
+      window.prompt(isAr ? 'انسخ الرابط:' : 'Copy link:', shareUrl)
+    }
+  }
+
   const deleteOrder = async () => {
     const ok = window.confirm(
       isAr
@@ -168,17 +189,27 @@ export function AdminOrder() {
           <ArrowLeft className="h-4 w-4" />
           {isAr ? 'العودة إلى الطلبات' : 'Back to orders'}
         </Link>
-        <button
-          type="button"
-          onClick={deleteOrder}
-          disabled={deleting}
-          className="inline-flex items-center gap-2 border border-burgundy-300 bg-burgundy-50 px-4 py-2 text-sm font-semibold text-burgundy-700 transition hover:bg-burgundy-100 disabled:opacity-50 dark:border-burgundy-800 dark:bg-burgundy-900/30 dark:text-burgundy-300 dark:hover:bg-burgundy-900/50"
-        >
-          <Trash2 className="h-4 w-4" />
-          {deleting
-            ? (isAr ? 'جارِ الحذف…' : 'Deleting…')
-            : (isAr ? 'حذف الطلب' : 'Delete order')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={shareLink}
+            className="inline-flex items-center gap-2 border border-victorian-300 bg-cream-50 px-4 py-2 text-sm font-semibold text-victorian-800 transition hover:bg-victorian-100 dark:border-victorian-700 dark:bg-victorian-950/60 dark:text-cream-100 dark:hover:bg-victorian-900"
+          >
+            {linkCopied ? <Check className="h-4 w-4 text-emerald-600" /> : <Share2 className="h-4 w-4" />}
+            {linkCopied ? (isAr ? 'تم النسخ' : 'Copied') : (isAr ? 'مشاركة' : 'Share')}
+          </button>
+          <button
+            type="button"
+            onClick={deleteOrder}
+            disabled={deleting}
+            className="inline-flex items-center gap-2 border border-burgundy-300 bg-burgundy-50 px-4 py-2 text-sm font-semibold text-burgundy-700 transition hover:bg-burgundy-100 disabled:opacity-50 dark:border-burgundy-800 dark:bg-burgundy-900/30 dark:text-burgundy-300 dark:hover:bg-burgundy-900/50"
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleting
+              ? (isAr ? 'جارِ الحذف…' : 'Deleting…')
+              : (isAr ? 'حذف الطلب' : 'Delete order')}
+          </button>
+        </div>
       </div>
 
       {/* Header card */}

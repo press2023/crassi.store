@@ -38,6 +38,7 @@ export default function App() {
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="visitors" element={<VisitorsPage />} />
         <Route path="track" element={<TrackOrder />} />
+        <Route path="order/:id" element={<TrackOrder />} />
         <Route path="login" element={<Login />} />
         <Route path="admin" element={<Admin />} />
         <Route path="admin/orders/:id" element={<AdminOrder />} />
