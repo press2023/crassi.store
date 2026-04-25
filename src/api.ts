@@ -155,6 +155,8 @@ export async function createOrder(payload: {
   notes?: string
   /** كود الخصم المُطبَّق على الطلب (اختياري) */
   discountCode?: string | null
+  /** Cloudflare Turnstile token للتحقق ضد البوتات */
+  turnstileToken?: string
   items: {
     productId: string
     quantity: number

@@ -206,6 +206,7 @@ app.post('/api/orders', async (req, res) => {
     landmark?: string
     notes?: string
     discountCode?: string | null
+    turnstileToken?: string
     items?: { productId: string; quantity: number; size: string; unitPrice: string; productName: string }[]
   }
   const items = body.items
@@ -224,6 +225,35 @@ app.post('/api/orders', async (req, res) => {
     .replace(/\s+/g, '')
   if (!customerName || !phone || !address || !province) {
     return res.status(400).json({ error: 'missing_fields' })
+  }
+
+  // Cloudflare Turnstile — تحقق مضاد للبوتات
+  // يعمل فقط إذا تم ضبط TURNSTILE_SECRET_KEY في البيئة.
+  // (يُتجاهل تلقائياً في التطوير المحلي إن لم يُضبط)
+  const turnstileSecret = process.env.TURNSTILE_SECRET_KEY
+  if (turnstileSecret) {
+    const token = String(body.turnstileToken ?? '').trim()
+    if (!token) return res.status(400).json({ error: 'captcha_missing' })
+    try {
+      const ip = String(req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()
+      const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          secret: turnstileSecret,
+          response: token,
+          ...(ip ? { remoteip: ip } : {}),
+        }).toString(),
+      })
+      const verify = (await verifyRes.json()) as { success?: boolean; 'error-codes'?: string[] }
+      if (!verify.success) {
+        console.warn('[turnstile] verification failed:', verify['error-codes'])
+        return res.status(400).json({ error: 'captcha_failed' })
+      }
+    } catch (e) {
+      console.error('[turnstile] verify request error:', e)
+      return res.status(503).json({ error: 'captcha_unavailable' })
+    }
   }
 
   try {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Check, CheckCircle, ChevronDown, Clock, Copy, MapPin, Package, Phone, Share2, ShoppingBag, Truck, User, XCircle } from 'lucide-react'
+import { Check, CheckCircle, ChevronDown, Clock, Copy, MapPin, Package, Phone, Printer, Share2, ShoppingBag, Truck, User, XCircle } from 'lucide-react'
+import { OrderInvoice, type InvoiceOrder } from '../components/OrderInvoice'
 import { SEO } from '../components/SEO'
 import { useLanguage } from '../context/LanguageContext'
 import { formatNumberEn, formatOrderDateTime } from '../lib/formatDigits'
@@ -535,37 +536,51 @@ export function TrackOrder() {
                       </aside>
                     </div>
 
-                    {/* Footer: order id + actions */}
+                    {/* Footer: order id + actions — متجاوب: على الجوال أيقونات فقط لمنع الازدحام */}
                     <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[11px] text-slate-400 dark:border-slate-800">
-                      <span className="font-mono truncate" dir="ltr">#{order.id}</span>
+                      <span className="font-mono truncate min-w-0" dir="ltr">#{order.id}</span>
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => shareOrder(order.id)}
-                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                          aria-label={isAr ? 'مشاركة' : 'Share'}
                           title={isAr ? 'مشاركة رابط الطلب' : 'Share order link'}
+                          className="inline-flex items-center gap-1.5 rounded-full p-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 sm:px-3 sm:py-1.5"
                         >
                           {copiedId === order.id ? (
-                            <>
-                              <Check className="h-3.5 w-3.5 text-emerald-600" />
-                              <span>{isAr ? 'تم النسخ' : 'Copied'}</span>
-                            </>
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
                           ) : (
-                            <>
-                              <Share2 className="h-3.5 w-3.5" />
-                              <span>{isAr ? 'مشاركة' : 'Share'}</span>
-                            </>
+                            <Share2 className="h-3.5 w-3.5" />
                           )}
+                          <span className="hidden sm:inline">
+                            {copiedId === order.id
+                              ? (isAr ? 'تم النسخ' : 'Copied')
+                              : (isAr ? 'مشاركة' : 'Share')}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => window.print()}
+                          aria-label={isAr ? 'طباعة' : 'Print'}
+                          title={isAr ? 'طباعة أو حفظ PDF' : 'Print or save PDF'}
+                          className="inline-flex items-center gap-1.5 rounded-full p-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 sm:px-3 sm:py-1.5"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">{isAr ? 'طباعة' : 'Print'}</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setExpandedId(null)}
+                          aria-label={isAr ? 'إغلاق' : 'Close'}
                           className="rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
                           {isAr ? 'إغلاق' : 'Close'}
                         </button>
                       </div>
                     </div>
+
+                    {/* فاتورة الطباعة — ترتبط بالطلب الموسّع فقط */}
+                    <OrderInvoice order={order as unknown as InvoiceOrder} isAr={isAr} />
                   </div>
                 )}
 

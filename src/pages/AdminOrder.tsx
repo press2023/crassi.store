@@ -8,11 +8,13 @@ import {
   MapPin,
   Package,
   Phone,
+  Printer,
   Share2,
   StickyNote,
   Trash2,
   User,
 } from 'lucide-react'
+import { OrderInvoice } from '../components/OrderInvoice'
 import { SEO } from '../components/SEO'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -180,40 +182,63 @@ export function AdminOrder() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
       <SEO title={isAr ? 'تفاصيل الطلب' : 'Order Details'} lang={isAr ? 'ar' : 'en'} noindex />
-      {/* Back + delete */}
-      <div className="mb-5 flex items-center justify-between gap-3">
+      {/* Back + actions — متجاوب: على الجوال يلتفّ السطر والنصوص تختفي مكتفياً بالأيقونات */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print-hide">
         <Link
           to="/admin"
           className="inline-flex items-center gap-2 text-sm text-victorian-600 hover:text-burgundy-700 dark:text-cream-300"
         >
           <ArrowLeft className="h-4 w-4" />
-          {isAr ? 'العودة إلى الطلبات' : 'Back to orders'}
+          <span className="hidden sm:inline">
+            {isAr ? 'العودة إلى الطلبات' : 'Back to orders'}
+          </span>
+          <span className="sm:hidden">
+            {isAr ? 'العودة' : 'Back'}
+          </span>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={shareLink}
-            className="inline-flex items-center gap-2 border border-victorian-300 bg-cream-50 px-4 py-2 text-sm font-semibold text-victorian-800 transition hover:bg-victorian-100 dark:border-victorian-700 dark:bg-victorian-950/60 dark:text-cream-100 dark:hover:bg-victorian-900"
+            aria-label={isAr ? 'مشاركة الرابط' : 'Share link'}
+            title={isAr ? 'مشاركة الرابط' : 'Share link'}
+            className="inline-flex items-center justify-center gap-2 border border-victorian-300 bg-cream-50 p-2 text-sm font-semibold text-victorian-800 transition hover:bg-victorian-100 dark:border-victorian-700 dark:bg-victorian-950/60 dark:text-cream-100 dark:hover:bg-victorian-900 sm:px-4"
           >
             {linkCopied ? <Check className="h-4 w-4 text-emerald-600" /> : <Share2 className="h-4 w-4" />}
-            {linkCopied ? (isAr ? 'تم النسخ' : 'Copied') : (isAr ? 'مشاركة' : 'Share')}
+            <span className="hidden sm:inline">
+              {linkCopied ? (isAr ? 'تم النسخ' : 'Copied') : (isAr ? 'مشاركة' : 'Share')}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            aria-label={isAr ? 'طباعة' : 'Print'}
+            title={isAr ? 'طباعة أو حفظ PDF' : 'Print or save PDF'}
+            className="inline-flex items-center justify-center gap-2 border border-victorian-300 bg-cream-50 p-2 text-sm font-semibold text-victorian-800 transition hover:bg-victorian-100 dark:border-victorian-700 dark:bg-victorian-950/60 dark:text-cream-100 dark:hover:bg-victorian-900 sm:px-4"
+          >
+            <Printer className="h-4 w-4" />
+            <span className="hidden sm:inline">{isAr ? 'طباعة' : 'Print'}</span>
           </button>
           <button
             type="button"
             onClick={deleteOrder}
             disabled={deleting}
-            className="inline-flex items-center gap-2 border border-burgundy-300 bg-burgundy-50 px-4 py-2 text-sm font-semibold text-burgundy-700 transition hover:bg-burgundy-100 disabled:opacity-50 dark:border-burgundy-800 dark:bg-burgundy-900/30 dark:text-burgundy-300 dark:hover:bg-burgundy-900/50"
+            aria-label={isAr ? 'حذف الطلب' : 'Delete order'}
+            title={isAr ? 'حذف الطلب' : 'Delete order'}
+            className="inline-flex items-center justify-center gap-2 border border-burgundy-300 bg-burgundy-50 p-2 text-sm font-semibold text-burgundy-700 transition hover:bg-burgundy-100 disabled:opacity-50 dark:border-burgundy-800 dark:bg-burgundy-900/30 dark:text-burgundy-300 dark:hover:bg-burgundy-900/50 sm:px-4"
           >
             <Trash2 className="h-4 w-4" />
-            {deleting
-              ? (isAr ? 'جارِ الحذف…' : 'Deleting…')
-              : (isAr ? 'حذف الطلب' : 'Delete order')}
+            <span className="hidden sm:inline">
+              {deleting
+                ? (isAr ? 'جارِ الحذف…' : 'Deleting…')
+                : (isAr ? 'حذف' : 'Delete')}
+            </span>
           </button>
         </div>
       </div>
 
       {/* Header card */}
-      <div className="mb-6 border border-victorian-200 bg-cream-50 p-5 dark:border-victorian-800 dark:bg-victorian-950/60">
+      <div className="mb-6 border border-victorian-200 bg-cream-50 p-5 dark:border-victorian-800 dark:bg-victorian-950/60 print-hide">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
@@ -252,7 +277,7 @@ export function AdminOrder() {
       </div>
 
       {/* Status actions */}
-      <div className="mb-6 border border-victorian-200 bg-cream-50 p-4 dark:border-victorian-800 dark:bg-victorian-950/60">
+      <div className="mb-6 border border-victorian-200 bg-cream-50 p-4 dark:border-victorian-800 dark:bg-victorian-950/60 print-hide">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-victorian-500">
           {isAr ? 'تحديث حالة الطلب' : 'Update status'}
         </p>
@@ -279,7 +304,7 @@ export function AdminOrder() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 print-hide">
         {/* Customer + Delivery */}
         <div className="space-y-6 lg:col-span-1">
           <InfoCard
@@ -395,6 +420,9 @@ export function AdminOrder() {
           </InfoCard>
         </div>
       </div>
+
+      {/* فاتورة الطباعة — مخفية على الشاشة، تظهر فقط عند window.print() */}
+      <OrderInvoice order={order} isAr={isAr} />
     </div>
   )
 }
