@@ -1,0 +1,22 @@
+# رؤوس عامة لكل الصفحات
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: interest-cohort=()
+
+# الصور والمرفوعات: كاش طويل عبر CDN (الأصول مع hash في dist/assets أصلاً)
+/uploads/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# sitemap و robots — كاش قصير لأنهما ديناميكيان من Railway
+/sitemap.xml
+  Content-Type: application/xml; charset=utf-8
+  Cache-Control: public, max-age=600
+
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600

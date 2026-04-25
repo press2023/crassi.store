@@ -1,0 +1,4 @@
+# SPA fallback — كل المسارات غير الموجودة تُقدَّم index.html
+# (المسارات /api/*, /uploads/*, /product/*, /category/*, /sitemap.xml, /robots.txt
+#  تُلتقط أولاً بواسطة Cloudflare Pages Functions داخل /functions)
+/*    /index.html   200
