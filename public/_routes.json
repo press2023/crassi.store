@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "description": "حدّد بدقة المسارات التي تشغّل Pages Functions. كل ما عدا ذلك يُقدَّم مباشرة من CDN كـ static (أسرع).",
+  "include": [
+    "/api/*",
+    "/uploads/*",
+    "/sitemap.xml",
+    "/robots.txt",
+    "/product/*",
+    "/category/*"
+  ],
+  "exclude": []
+}
