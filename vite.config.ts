@@ -28,7 +28,7 @@ function pwaGenerateSwPlugin(): Plugin {
       if (entryJs) precache.push(`/assets/${entryJs}`)
       if (entryCss) precache.push(`/assets/${entryCss}`)
 
-      const cacheName = 'victorian-store-v2'
+      const cacheName = 'victorian-store-v3'
       const precacheJson = JSON.stringify(precache)
       const cacheJson = JSON.stringify(cacheName)
 
@@ -85,6 +85,47 @@ self.addEventListener('fetch', (event) => {
       });
     }),
   );
+});
+
+// ── Web Push: استقبال إشعار طلب جديد وعرضه ──
+self.addEventListener('push', (event) => {
+  let data = {};
+  if (event.data) {
+    try { data = event.data.json(); } catch { data = { title: 'إشعار', body: event.data.text() }; }
+  }
+  const title = data.title || 'إشعار جديد';
+  const options = {
+    body: data.body || '',
+    icon: '/site-logo.jpg',
+    badge: '/favicon.svg',
+    tag: data.tag || 'order',
+    renotify: true,
+    requireInteraction: true,
+    data: { url: data.url || '/admin' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// عند النقر على الإشعار: افتح رابط الطلب أو ركّز نافذة موجودة
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/admin';
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of all) {
+      try {
+        const u = new URL(client.url);
+        if (u.origin === self.location.origin) {
+          await client.focus();
+          if ('navigate' in client) {
+            try { await client.navigate(target); } catch {}
+          }
+          return;
+        }
+      } catch {}
+    }
+    await self.clients.openWindow(target);
+  })());
 });
 `
       fs.writeFileSync(path.join(outDir, 'sw.js'), sw, 'utf8')

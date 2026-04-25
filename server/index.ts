@@ -12,6 +12,8 @@ import uploadRoutes from './routes/upload.js'
 import settingsRoutes from './routes/settings.js'
 import visitorsRoutes from './routes/visitors.js'
 import reviewsRoutes from './routes/reviews.js'
+import pushRoutes from './routes/push.js'
+import { sendPushToAll } from './lib/push.js'
 import { DELIVERY_FEE_IQD } from '../src/lib/deliveryFee.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -95,6 +97,7 @@ app.use('/api/upload', uploadRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/visitors', visitorsRoutes)
 app.use('/api/reviews', reviewsRoutes)
+app.use('/api/admin/push', pushRoutes)
 
 function serializeProduct(p: {
   price: { toString(): string }
@@ -260,10 +263,18 @@ app.post('/api/orders', async (req, res) => {
         })
       }
 
-      return order
+      return { order, total, itemsCount: lineData.reduce((s, l) => s + l.quantity, 0) }
     })
 
-    res.status(201).json({ id: result.id })
+    // إشعار صاحب المتجر بطلب جديد (لا يفشل الطلب إن فشل الإرسال)
+    void sendPushToAll({
+      title: 'طلب جديد',
+      body: `${customerName} — ${province}${city ? ` / ${city}` : ''} — ${result.total.toString()} د.ع (${result.itemsCount} قطعة)`,
+      url: `/admin/orders/${result.order.id}`,
+      tag: `order-${result.order.id}`,
+    }).catch((e) => console.error('[push] order notify failed:', e))
+
+    res.status(201).json({ id: result.order.id })
   } catch (e) {
     const msg = e instanceof Error ? e.message : ''
     if (msg === 'product_not_found') return res.status(400).json({ error: 'product_not_found' })

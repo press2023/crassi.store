@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
+  Bell,
+  BellOff,
   Calendar,
   CheckSquare,
   ClipboardList,
@@ -33,6 +35,13 @@ import {
 } from '../lib/formatDigits'
 import { uploadImageFile } from '../lib/uploadImage'
 import { getPricing } from '../lib/price'
+import {
+  disablePush,
+  enablePush,
+  getCurrentSubscription,
+  isPushSupported,
+  sendTestPush,
+} from '../lib/pushClient'
 import type { Category, Product } from '../types'
 
 const base = import.meta.env.VITE_API_BASE ?? ''
@@ -1042,16 +1051,258 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'ملغي', color: 'bg-burgundy-100 text-burgundy-800 dark:bg-burgundy-900/30 dark:text-burgundy-300' },
 ]
 
-function OrdersTab({ orders, isAr }: { token: string; orders: Order[]; isAr: boolean; reload: () => void }) {
+function PushNotificationsCard({ token, isAr }: { token: string; isAr: boolean }) {
+  const [supported] = useState<boolean>(() => isPushSupported())
+  const [permission, setPermission] = useState<NotificationPermission>(() =>
+    typeof Notification !== 'undefined' ? Notification.permission : 'default',
+  )
+  const [enabled, setEnabled] = useState<boolean | null>(null)
+  const [busy, setBusy] = useState<boolean>(false)
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err' | 'info'; text: string } | null>(null)
+  const [serverConfigured, setServerConfigured] = useState<boolean | null>(null)
+  const isProd = import.meta.env.PROD
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (!supported) {
+        setEnabled(false)
+        return
+      }
+      try {
+        const sub = await getCurrentSubscription()
+        if (!cancelled) setEnabled(!!sub)
+      } catch {
+        if (!cancelled) setEnabled(false)
+      }
+      try {
+        const r = await fetch(`${base}/api/admin/push/public-key`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (r.ok) {
+          const d = (await r.json()) as { configured: boolean }
+          if (!cancelled) setServerConfigured(Boolean(d.configured))
+        } else if (!cancelled) {
+          setServerConfigured(false)
+        }
+      } catch {
+        if (!cancelled) setServerConfigured(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [supported, token])
+
+  async function onEnable() {
+    setBusy(true)
+    setMsg(null)
+    try {
+      await enablePush(token)
+      setEnabled(true)
+      setPermission(typeof Notification !== 'undefined' ? Notification.permission : 'granted')
+      setMsg({
+        kind: 'ok',
+        text: isAr ? 'تم تفعيل الإشعارات على هذا الجهاز' : 'Notifications enabled on this device',
+      })
+    } catch (e) {
+      const code = (e as Error).message
+      const map: Record<string, { ar: string; en: string }> = {
+        push_not_supported: {
+          ar: 'هذا المتصفح لا يدعم إشعارات الويب',
+          en: 'This browser does not support web push',
+        },
+        permission_denied: {
+          ar: 'تم رفض إذن الإشعارات — فعّله من إعدادات الموقع في المتصفح',
+          en: 'Permission denied — enable it in your browser site settings',
+        },
+        push_not_configured: {
+          ar: 'لم يضبط مدير النظام مفاتيح VAPID على السيرفر',
+          en: 'Server VAPID keys are not configured',
+        },
+        public_key_failed: {
+          ar: 'فشل جلب مفتاح السيرفر العام',
+          en: 'Failed to fetch server public key',
+        },
+        subscribe_failed: {
+          ar: 'فشل حفظ الاشتراك على السيرفر',
+          en: 'Failed to save subscription on server',
+        },
+      }
+      const m = map[code]
+      setMsg({
+        kind: 'err',
+        text: m ? (isAr ? m.ar : m.en) : isAr ? `حدث خطأ: ${code}` : `Error: ${code}`,
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onDisable() {
+    setBusy(true)
+    setMsg(null)
+    try {
+      await disablePush(token)
+      setEnabled(false)
+      setMsg({
+        kind: 'info',
+        text: isAr ? 'تم تعطيل الإشعارات على هذا الجهاز' : 'Notifications disabled on this device',
+      })
+    } catch {
+      setMsg({ kind: 'err', text: isAr ? 'تعذّر التعطيل' : 'Could not disable' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onTest() {
+    setBusy(true)
+    setMsg(null)
+    try {
+      const r = await sendTestPush(token)
+      setMsg({
+        kind: 'ok',
+        text: isAr
+          ? `أُرسل لـ ${r.sent} جهاز${r.removed ? ` — حُذف ${r.removed} منتهٍ` : ''}`
+          : `Sent to ${r.sent} device(s)${r.removed ? `, removed ${r.removed} expired` : ''}`,
+      })
+    } catch (e) {
+      const code = (e as Error).message
+      setMsg({
+        kind: 'err',
+        text:
+          code === 'push_not_configured'
+            ? isAr
+              ? 'لم يضبط مدير النظام مفاتيح VAPID'
+              : 'Server VAPID keys not configured'
+            : isAr
+              ? 'فشل إرسال الإشعار التجريبي'
+              : 'Failed to send test',
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="border border-victorian-200 bg-cream-50 p-4 dark:border-victorian-800 dark:bg-victorian-950/60">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+              enabled
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                : 'bg-victorian-100 text-victorian-500 dark:bg-victorian-900 dark:text-victorian-400'
+            }`}
+          >
+            {enabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+          </div>
+          <div>
+            <p className="font-display text-sm font-bold uppercase tracking-[0.18em] text-victorian-900 dark:text-cream-50">
+              {isAr ? 'إشعارات الطلبات' : 'Order notifications'}
+            </p>
+            <p className="mt-1 max-w-prose text-xs leading-relaxed text-victorian-600 dark:text-victorian-300">
+              {isAr
+                ? 'فعّل الإشعارات لتصلك تنبيهات بالطلبات الجديدة حتى لو كانت لوحة التحكم مغلقة.'
+                : 'Enable notifications to get alerts for new orders even when the dashboard is closed.'}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {enabled ? (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onTest}
+                className="inline-flex items-center gap-2 border border-victorian-300 px-3 py-1.5 text-xs font-semibold text-victorian-700 hover:bg-victorian-100 disabled:opacity-50 dark:border-victorian-700 dark:text-cream-200 dark:hover:bg-victorian-900"
+              >
+                <Bell className="h-3.5 w-3.5" />
+                {isAr ? 'اختبار' : 'Test'}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onDisable}
+                className="inline-flex items-center gap-2 border border-burgundy-300 px-3 py-1.5 text-xs font-semibold text-burgundy-700 hover:bg-burgundy-50 disabled:opacity-50 dark:border-burgundy-700 dark:text-burgundy-300 dark:hover:bg-burgundy-900/30"
+              >
+                <BellOff className="h-3.5 w-3.5" />
+                {isAr ? 'تعطيل' : 'Disable'}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={busy || !supported || serverConfigured === false}
+              onClick={onEnable}
+              className="inline-flex items-center gap-2 border-2 border-burgundy-700 bg-burgundy-700 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-cream-50 transition hover:bg-burgundy-800 disabled:opacity-50"
+            >
+              <Bell className="h-3.5 w-3.5" />
+              {isAr ? 'تفعيل الإشعارات' : 'Enable notifications'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!supported && (
+        <p className="mt-3 text-xs text-burgundy-700 dark:text-burgundy-300">
+          {isAr
+            ? 'متصفحك لا يدعم إشعارات الويب. على iPhone، ثبّت الموقع كتطبيق من Safari (أيقونة المشاركة → إضافة إلى الشاشة الرئيسية) ثم افتحه من هناك.'
+            : 'Your browser does not support web push. On iPhone, install the site as an app from Safari (Share → Add to Home Screen).'}
+        </p>
+      )}
+      {supported && permission === 'denied' && (
+        <p className="mt-3 text-xs text-burgundy-700 dark:text-burgundy-300">
+          {isAr
+            ? 'تم حظر الإشعارات لهذا الموقع — افتح إعدادات الموقع في المتصفح وفعّل الإشعارات.'
+            : 'Notifications are blocked — allow them in the browser site settings.'}
+        </p>
+      )}
+      {serverConfigured === false && (
+        <p className="mt-3 text-xs text-burgundy-700 dark:text-burgundy-300">
+          {isAr
+            ? 'مفاتيح VAPID غير مضبوطة على السيرفر — تواصل مع مدير النظام.'
+            : 'Server VAPID keys are not set — contact the system administrator.'}
+        </p>
+      )}
+      {!isProd && (
+        <p className="mt-3 text-xs text-victorian-500">
+          {isAr
+            ? 'ملاحظة: في وضع التطوير قد لا يعمل service worker. جرّب بعد build/start.'
+            : 'Note: service worker only runs after build/start.'}
+        </p>
+      )}
+      {msg && (
+        <p
+          className={`mt-3 text-xs ${
+            msg.kind === 'ok'
+              ? 'text-emerald-700 dark:text-emerald-300'
+              : msg.kind === 'err'
+                ? 'text-burgundy-700 dark:text-burgundy-300'
+                : 'text-victorian-600 dark:text-victorian-300'
+          }`}
+        >
+          {msg.text}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function OrdersTab({ token, orders, isAr }: { token: string; orders: Order[]; isAr: boolean; reload: () => void }) {
   const [filter, setFilter] = useState<string>('all')
 
   const filtered = filter === 'all' ? orders : orders.filter((o) => o.status === filter)
 
   if (orders.length === 0) {
     return (
-      <div className="py-16 text-center">
-        <ClipboardList className="mx-auto h-12 w-12 text-victorian-300" />
-        <p className="mt-4 text-sm text-victorian-400">{isAr ? 'لا توجد طلبات بعد' : 'No orders yet'}</p>
+      <div className="space-y-5">
+        <PushNotificationsCard token={token} isAr={isAr} />
+        <div className="py-16 text-center">
+          <ClipboardList className="mx-auto h-12 w-12 text-victorian-300" />
+          <p className="mt-4 text-sm text-victorian-400">{isAr ? 'لا توجد طلبات بعد' : 'No orders yet'}</p>
+        </div>
       </div>
     )
   }
@@ -1063,6 +1314,8 @@ function OrdersTab({ orders, isAr }: { token: string; orders: Order[]; isAr: boo
 
   return (
     <div className="space-y-5">
+      <PushNotificationsCard token={token} isAr={isAr} />
+
       {/* فلتر الحالة */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         <button

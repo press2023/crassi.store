@@ -97,3 +97,17 @@ model Review {
   /// رمز سري يُعاد للمتصفح مرة واحدة عند الإنشاء — لحذف التعليق من دون تسجيل دخول
   deleteToken String?  @unique
 }
+
+// اشتراك Web Push لجهاز/متصفح صاحب المتجر — يُرسل عليه إشعار عند طلب جديد
+model PushSubscription {
+  id          String   @id @default(cuid())
+  endpoint    String   @unique
+  p256dh      String
+  auth        String
+  adminEmail  String
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime @default(now())
+
+  @@index([adminEmail])
+}
