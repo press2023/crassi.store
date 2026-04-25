@@ -3,28 +3,140 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <!-- يُحدَّث من ThemeContext ليتطابق مع الوضع الفاتح/الداكن (PWA آيفون) -->
+    <!-- يُحدَّث من ThemeContext ليتطابق مع الوضع الفاتح/الداكن (PWA آيفون) -->
     <meta name="theme-color" content="#fbf7f1" id="meta-theme-color" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <!-- default: شريط حالة نظامي يتناسق مع الخلفية الفاتحة وليس شريطاً شفافاً فارغاً -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Victorian" />
+    <meta name="application-name" content="Victorian Iraq" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta http-equiv="x-ua-compatible" content="IE=edge" />
     <link rel="icon" type="image/jpeg" href="/site-logo.jpg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/site-logo.jpg" />
+    <link rel="mask-icon" href="/favicon.svg" color="#7a1f2b" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover"
     />
-    <meta name="description" content="Victorian Store — متجر بروح العصر الفيكتوري" />
+
+    <!-- ── SEO الأساسي ── -->
+    <title>Victorian Iraq — دفاتر فيكتورية وأقلام ريش وساعات جيب وهدايا</title>
+    <meta
+      name="description"
+      content="Victorian Iraq متجر إلكتروني عراقي متخصص بالدفاتر الفيكتورية، أقلام الريش، ساعات الجيب، الظروف القديمة والهدايا الكلاسيكية. توصيل لكل المحافظات والدفع عند الاستلام."
+    />
+    <meta
+      name="keywords"
+      content="Victorian Iraq, victorianiraq, متجر فيكتوريان, دفاتر فيكتورية, اقلام ريش, ساعات جيب, ظروف فيكتورية, هدايا كلاسيكية, دفتر يوميات, دفتر فيكتوري, pocket watch, quill pen, victorian notebook, vintage envelopes, classic gifts Iraq, تسوق اونلاين العراق, هدايا العراق"
+    />
+    <meta name="author" content="Victorian Iraq" />
+    <meta name="generator" content="Vite + React" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="bingbot" content="index, follow" />
+    <meta name="rating" content="general" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <link rel="canonical" href="https://victorianiraq.com/" />
+
+    <!-- ── Open Graph ── -->
+    <meta property="og:site_name" content="Victorian Iraq" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://victorianiraq.com/" />
+    <meta property="og:title" content="Victorian Iraq — دفاتر فيكتورية وأقلام ريش وهدايا" />
+    <meta
+      property="og:description"
+      content="متجر فيكتوريان عراقي: دفاتر فيكتورية، أقلام ريش، ساعات جيب، ظروف وهدايا كلاسيكية — توصيل لكل العراق."
+    />
     <meta property="og:image" content="/site-logo.jpg" />
+    <meta property="og:image:alt" content="Victorian Iraq" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ar_IQ" />
+    <meta property="og:locale:alternate" content="en_US" />
+
+    <!-- ── Twitter Card ── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Victorian Iraq — دفاتر فيكتورية وأقلام ريش وهدايا" />
+    <meta
+      name="twitter:description"
+      content="متجر فيكتوريان عراقي: دفاتر فيكتورية، أقلام ريش، ساعات جيب، ظروف وهدايا كلاسيكية — توصيل لكل العراق."
+    />
+    <meta name="twitter:image" content="/site-logo.jpg" />
+    <meta name="twitter:image:alt" content="Victorian Iraq" />
+
+    <!-- ── Hreflang (افتراضي عربي + بديل إنجليزي + x-default) ── -->
+    <link rel="alternate" hreflang="ar" href="https://victorianiraq.com/" />
+    <link rel="alternate" hreflang="en" href="https://victorianiraq.com/?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="https://victorianiraq.com/" />
+
+    <!-- ── أداء/اتصال مسبق ── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://crassistore-production.up.railway.app" />
+    <link rel="preconnect" href="https://crassistore-production.up.railway.app" crossorigin />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
       rel="stylesheet"
     />
-    <title>Victorian Store</title>
+
+    <!-- ── JSON-LD: المنظمة + الموقع + إجراء بحث ── -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://victorianiraq.com/#organization",
+            "name": "Victorian Iraq",
+            "alternateName": ["فيكتوريان العراق", "متجر فيكتوريان", "victorianiraq"],
+            "url": "https://victorianiraq.com/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://victorianiraq.com/site-logo.jpg",
+              "width": 512,
+              "height": 512
+            },
+            "image": "https://victorianiraq.com/site-logo.jpg",
+            "description": "متجر إلكتروني عراقي متخصص بالدفاتر الفيكتورية، أقلام الريش، ساعات الجيب، الظروف القديمة والهدايا الكلاسيكية.",
+            "areaServed": { "@type": "Country", "name": "Iraq" }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://victorianiraq.com/#website",
+            "url": "https://victorianiraq.com/",
+            "name": "Victorian Iraq",
+            "alternateName": "متجر فيكتوريان",
+            "inLanguage": ["ar", "en"],
+            "publisher": { "@id": "https://victorianiraq.com/#organization" },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://victorianiraq.com/search?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "OnlineStore",
+            "@id": "https://victorianiraq.com/#store",
+            "name": "Victorian Iraq",
+            "url": "https://victorianiraq.com/",
+            "image": "https://victorianiraq.com/site-logo.jpg",
+            "description": "دفاتر فيكتورية، أقلام ريش، ساعات جيب، ظروف وهدايا كلاسيكية في العراق.",
+            "priceRange": "IQD 5,000 — IQD 500,000",
+            "currenciesAccepted": "IQD",
+            "paymentAccepted": "Cash on Delivery",
+            "areaServed": { "@type": "Country", "name": "Iraq" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

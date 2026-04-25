@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle, Clock, Package, Truck, XCircle } from 'lucide-react'
+import { SEO } from '../components/SEO'
 import { useLanguage } from '../context/LanguageContext'
 import { formatNumberEn, formatOrderDateTime } from '../lib/formatDigits'
 
@@ -75,6 +76,12 @@ export function TrackOrder() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-10">
+      <SEO
+        title={isAr ? 'طلباتي' : 'My Orders'}
+        description={isAr ? 'تتبع حالة طلباتك في متجر فيكتوريان.' : 'Track your Victorian Store orders.'}
+        lang={isAr ? 'ar' : 'en'}
+        noindex
+      />
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
         {isAr ? 'طلباتي' : 'My orders'}
       </h1>

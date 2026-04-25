@@ -129,9 +129,12 @@ function CircleInner({
           {image ? (
             <img
               src={image}
-              alt=""
+              alt={label}
               className="h-full w-full rounded-full object-cover"
               loading="lazy"
+              decoding="async"
+              width="112"
+              height="112"
             />
           ) : (
             <BookOpen

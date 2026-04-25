@@ -13,7 +13,10 @@ export type Product = {
   nameAr: string
   description: string
   descriptionAr: string
+  /** السعر الأصلي (الكامل) */
   price: string
+  /** السعر بعد التخفيض — null/undefined = لا يوجد تخفيض */
+  salePrice?: string | null
   images: string[]
   sizes: string[]
   stock: number

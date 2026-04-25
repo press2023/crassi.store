@@ -4,14 +4,17 @@ import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
 import { DELIVERY_FEE_IQD } from '../lib/deliveryFee'
 import { formatNumberEn } from '../lib/formatDigits'
+import { SEO } from '../components/SEO'
 
 export function Cart() {
   const { t, isAr } = useLanguage()
   const { items, updateQty, remove, subtotal, deliveryFee, grandTotal } = useCart()
+  // السلة محتواها متغيّر شخصي — noindex
 
   if (!items.length) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-20 text-center">
+        <SEO title={t('navCart')} lang={isAr ? 'ar' : 'en'} noindex />
         <p className="text-lg text-slate-600 dark:text-slate-300">{t('emptyCart')}</p>
         <Link
           to="/products"
@@ -27,6 +30,7 @@ export function Cart() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
+      <SEO title={t('navCart')} lang={isAr ? 'ar' : 'en'} noindex />
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('navCart')}</h1>
 
       <div

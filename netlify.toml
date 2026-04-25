@@ -2,11 +2,15 @@
   command = "npm run build:client"
   publish = "dist"
 
-# Open Graph / Twitter cards for product links (static SPA otherwise has no per-product meta).
-# Set PUBLIC_API_ORIGIN (or SHARE_API_ORIGIN) in Netlify to your API base, e.g. https://your-app.up.railway.app
+# Edge functions تحقن ميتا/JSON-LD ديناميكية لروابط المشاركة (المنتج + التصنيف)
+# Set PUBLIC_API_ORIGIN (أو SHARE_API_ORIGIN) في Netlify إلى أصل الـ API، مثل: https://your-app.up.railway.app
 [[edge_functions]]
   path = "/product/*"
   function = "product-meta"
+
+[[edge_functions]]
+  path = "/category/*"
+  function = "category-meta"
 
 # نفس أصل الـ API — الصور المحفوظة تحت /uploads على الخادم وليست في dist
 [[redirects]]
@@ -21,7 +25,41 @@
   status = 200
   force = true
 
+# sitemap.xml و robots.txt يولّدان ديناميكياً من الـ API (يضمّان كل المنتجات/التصنيفات)
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "https://crassistore-production.up.railway.app/sitemap.xml"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/robots.txt"
+  to = "https://crassistore-production.up.railway.app/robots.txt"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+# ── ترويسات SEO/أمان عامة ──
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+    Permissions-Policy = "interest-cohort=()"
+
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Content-Type = "application/xml; charset=utf-8"
+    Cache-Control = "public, max-age=600"
+
+[[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    Cache-Control = "public, max-age=3600"

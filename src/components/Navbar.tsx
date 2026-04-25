@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   Star,
   Sun,
+  Tag,
   Eye,
   User,
 } from 'lucide-react'
@@ -148,6 +149,15 @@ export function Navbar() {
           <NavLink to="/products" className={linkClass}>
             <LayoutGrid className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
             {t('navShop')}
+          </NavLink>
+          <NavLink to="/sale" className={linkClass}>
+            <Tag className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
+            <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+              {isAr ? 'التخفيضات' : 'Sale'}
+              <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                {isAr ? 'حار' : 'HOT'}
+              </span>
+            </span>
           </NavLink>
           <NavLink to="/search" className={linkClass}>
             <Search className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />

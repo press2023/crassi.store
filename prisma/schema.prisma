@@ -37,6 +37,7 @@ model Product {
   description   String
   descriptionAr String
   price         Decimal     @db.Decimal(10, 2)
+  salePrice     Decimal?    @db.Decimal(10, 2)
   images        String[]
   sizes         String[]
   stock         Int         @default(0)

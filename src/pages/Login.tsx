@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock } from 'lucide-react'
+import { SEO } from '../components/SEO'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 
@@ -29,6 +30,11 @@ export function Login() {
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
+      <SEO
+        title={isAr ? 'تسجيل دخول المشرف' : 'Admin Login'}
+        lang={isAr ? 'ar' : 'en'}
+        noindex
+      />
       <form
         onSubmit={submit}
         className="w-full max-w-sm space-y-5"

@@ -104,6 +104,7 @@ router.post('/products', requirePermission('products'), async (req, res) => {
     description?: string
     descriptionAr?: string
     price?: number
+    salePrice?: number | string | null
     images?: string[]
     sizes?: string[]
     stock?: number
@@ -126,6 +127,19 @@ router.post('/products', requirePermission('products'), async (req, res) => {
     if (parsed === 'too_many') return res.status(400).json({ error: 'too_many_images' })
     productImages = parsed
   }
+  // sale price: قَبول null لمسح التخفيض، أو رقم موجب < السعر الأصلي
+  let salePriceData: number | null | undefined = undefined
+  if (b.salePrice !== undefined) {
+    if (b.salePrice === null || b.salePrice === '' || Number(b.salePrice) <= 0) {
+      salePriceData = null
+    } else {
+      const sp = Number(b.salePrice)
+      if (sp >= Number(b.price)) {
+        return res.status(400).json({ error: 'sale_price_must_be_lower' })
+      }
+      salePriceData = sp
+    }
+  }
   try {
     const row = await prisma.product.create({
       data: {
@@ -135,6 +149,7 @@ router.post('/products', requirePermission('products'), async (req, res) => {
         description: (b.description ?? '').trim(),
         descriptionAr: (b.descriptionAr ?? '').trim(),
         price: b.price,
+        ...(salePriceData !== undefined ? { salePrice: salePriceData } : {}),
         images: productImages,
         sizes: b.sizes ?? [],
         stock: b.stock ?? 0,
@@ -158,7 +173,7 @@ router.put('/products/:id', requirePermission('products'), async (req, res) => {
   try {
     const prev = await prisma.product.findUnique({
       where: { id: req.params.id },
-      select: { images: true },
+      select: { images: true, price: true },
     })
     if (!prev) return res.status(404).json({ error: 'not_found' })
 
@@ -170,6 +185,22 @@ router.put('/products/:id', requirePermission('products'), async (req, res) => {
       imagesPatch = parsed
     }
 
+    // Sale price patch: undefined = لا يُلمس، null/'' = إزالة التخفيض، رقم موجب = تعيين
+    let salePricePatch: number | null | undefined = undefined
+    if ('salePrice' in b) {
+      const sp = b.salePrice
+      if (sp === null || sp === '' || sp === undefined || Number(sp) <= 0) {
+        salePricePatch = null
+      } else {
+        const spNum = Number(sp)
+        const basePrice = b.price != null ? Number(b.price) : Number(prev.price)
+        if (spNum >= basePrice) {
+          return res.status(400).json({ error: 'sale_price_must_be_lower' })
+        }
+        salePricePatch = spNum
+      }
+    }
+
     const row = await prisma.product.update({
       where: { id: req.params.id },
       data: {
@@ -178,6 +209,7 @@ router.put('/products/:id', requirePermission('products'), async (req, res) => {
         ...(b.description != null ? { description: String(b.description) } : {}),
         ...(b.descriptionAr != null ? { descriptionAr: String(b.descriptionAr) } : {}),
         ...(b.price != null ? { price: Number(b.price) } : {}),
+        ...(salePricePatch !== undefined ? { salePrice: salePricePatch } : {}),
         ...(imagesPatch != null ? { images: imagesPatch } : {}),
         ...(b.sizes != null ? { sizes: b.sizes as string[] } : {}),
         ...(b.stock != null ? { stock: Number(b.stock) } : {}),

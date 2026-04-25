@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ArrowRight, ImagePlus, X } from 'lucide-react'
+import { SEO } from '../components/SEO'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import { uploadImageFile } from '../lib/uploadImage'
@@ -30,6 +31,7 @@ export function AdminEditProduct() {
   const [nameAr, setNameAr] = useState('')
   const [descAr, setDescAr] = useState('')
   const [price, setPrice] = useState('')
+  const [salePrice, setSalePrice] = useState('') // فارغ = لا تخفيض
   const [stock, setStock] = useState('10')
   const [imageSlots, setImageSlots] = useState<ImageSlot[]>([])
   const imageSlotsRef = useRef<ImageSlot[]>([])
@@ -52,6 +54,7 @@ export function AdminEditProduct() {
         if (p) {
           setSlug(p.slug); setNameAr(p.nameAr); setDescAr(p.descriptionAr)
           setPrice(String(p.price)); setStock(String(p.stock))
+          setSalePrice(p.salePrice != null && p.salePrice !== '' ? String(p.salePrice) : '')
           setImageSlots(
             p.images.slice(0, MAX_PRODUCT_IMAGES).map((url) => ({ kind: 'remote' as const, url })),
           )
@@ -142,9 +145,16 @@ export function AdminEditProduct() {
       .filter((s): s is { kind: 'remote'; url: string } => s.kind === 'remote')
       .map((s) => s.url)
       .slice(0, MAX_PRODUCT_IMAGES)
+    // التحقق من سعر التخفيض (دائماً أصغر من الأصلي)
+    const sp = salePrice.trim() === '' ? null : Number(salePrice)
+    if (sp != null && (!Number.isFinite(sp) || sp <= 0 || sp >= Number(price))) {
+      setBusy(false)
+      alert(isAr ? 'سعر التخفيض يجب أن يكون أصغر من السعر الأصلي وأكبر من صفر.' : 'Sale price must be lower than the original price and greater than zero.')
+      return
+    }
     const body = {
       slug, name: nameAr, nameAr, description: descAr, descriptionAr: descAr,
-      price: Number(price), sizes: [],
+      price: Number(price), salePrice: sp, sizes: [],
       stock: Number(stock), images: uploaded, categoryId: catId, featured,
     }
     if (id) {
@@ -165,6 +175,7 @@ export function AdminEditProduct() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
+      <SEO title={isAr ? (isNew ? 'إضافة منتج' : 'تعديل منتج') : (isNew ? 'Add Product' : 'Edit Product')} lang={isAr ? 'ar' : 'en'} noindex />
       <button type="button" onClick={() => navigate('/admin')}
         className="mb-6 inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white">
         <ArrowRight className="h-4 w-4 rotate-180 rtl:rotate-0" />
@@ -199,6 +210,33 @@ export function AdminEditProduct() {
           <label className="block">
             <span className="text-xs text-slate-400">المخزون</span>
             <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className={inp} />
+          </label>
+        </div>
+
+        {/* سعر التخفيض — اختياري */}
+        <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-3 dark:border-rose-900/40 dark:bg-rose-950/20">
+          <label className="block">
+            <span className="flex items-center gap-2 text-xs font-semibold text-rose-700 dark:text-rose-300">
+              <span>{isAr ? 'سعر التخفيض (اختياري)' : 'Sale price (optional)'}</span>
+              {salePrice && Number(salePrice) > 0 && Number(salePrice) < Number(price || 0) && (
+                <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                  {isAr ? `خصم ${Math.round(((Number(price)-Number(salePrice))/Number(price))*100)}٪` : `-${Math.round(((Number(price)-Number(salePrice))/Number(price))*100)}%`}
+                </span>
+              )}
+            </span>
+            <input
+              type="number"
+              min="0"
+              value={salePrice}
+              onChange={(e) => setSalePrice(e.target.value)}
+              placeholder={isAr ? 'اتركه فارغاً لإلغاء التخفيض' : 'Leave empty to remove discount'}
+              className={inp}
+            />
+            <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">
+              {isAr
+                ? 'عند التعيين: يجب أن يكون أصغر من السعر الأصلي. المنتج سيظهر في صفحة التخفيضات.'
+                : 'When set: must be lower than the original price. The product will appear on the Sale page.'}
+            </span>
           </label>
         </div>
 

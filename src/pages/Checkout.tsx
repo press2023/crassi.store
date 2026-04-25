@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createOrder } from '../api'
+import { SEO } from '../components/SEO'
 import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
 import { saveOrderId } from './TrackOrder'
@@ -47,6 +48,7 @@ export function Checkout() {
   if (!items.length && !doneId) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
+        <SEO title={t('checkout')} lang={isAr ? 'ar' : 'en'} noindex />
         <p className="text-slate-500">{t('emptyCart')}</p>
         <Link to="/products" className="mt-4 inline-block text-sm underline underline-offset-4">
           {t('navShop')}
@@ -58,6 +60,7 @@ export function Checkout() {
   if (doneId) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
+        <SEO title={t('orderThanks')} lang={isAr ? 'ar' : 'en'} noindex />
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('orderThanks')}</h1>
         <p className="mt-4 text-slate-500">
           {t('orderId')}: <span className="font-mono font-bold text-slate-900 dark:text-white">{doneId}</span>
@@ -128,6 +131,7 @@ export function Checkout() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-10">
+      <SEO title={t('checkout')} lang={isAr ? 'ar' : 'en'} noindex />
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('checkout')}</h1>
 
       <form onSubmit={submit} className="mt-8 flex flex-col gap-4">

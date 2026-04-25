@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Crown } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
@@ -8,6 +8,8 @@ import { CategoryCircles } from '../components/CategoryCircles'
 import { ProductCard } from '../components/ProductCard'
 import { VisitorCounterCard } from '../components/VisitorBadge'
 import { ProductGridShimmer, HeroShimmer } from '../components/Shimmer'
+import { SEO } from '../components/SEO'
+import { buildCanonical, itemListLD } from '../lib/seo'
 import type { Category, Product } from '../types'
 
 export function Home() {
@@ -64,8 +66,43 @@ export function Home() {
     setHeroImageBroken(false)
   }, [heroImg])
 
+  const featuredLD = useMemo(() => {
+    if (featured.length === 0) return null
+    return itemListLD({
+      name: isAr ? 'المختارات الملكية' : 'Featured Picks',
+      url: buildCanonical('/'),
+      items: featured.map((p) => ({
+        slug: p.slug,
+        name: isAr ? p.nameAr : p.name,
+        image: p.images[0],
+        price: p.price,
+      })),
+    })
+  }, [featured, isAr])
+
+  const homeTitle = settings.heroTitle?.trim() ||
+    (isAr
+      ? 'متجر فيكتوريان — دفاتر فيكتورية وأقلام ريش وساعات جيب وهدايا'
+      : 'Victorian Iraq — Notebooks, Quill Pens, Pocket Watches & Gifts')
+  const homeDesc = settings.heroSubtitle?.trim() ||
+    (isAr
+      ? 'تشكيلات أصيلة بروح فيكتورية: دفاتر يوميات، أقلام ريش، ساعات جيب، ظروف وهدايا كلاسيكية. توصيل لكل المحافظات والدفع عند الاستلام.'
+      : 'Authentic Victorian-inspired pieces: journal notebooks, quill pens, pocket watches, vintage envelopes & classic gifts. Delivery across Iraq, cash on delivery.')
+
   return (
     <div>
+      <SEO
+        title={homeTitle}
+        description={homeDesc}
+        image={heroImg || null}
+        lang={isAr ? 'ar' : 'en'}
+        keywords={
+          isAr
+            ? ['متجر فيكتوريان', 'دفاتر فيكتورية', 'أقلام ريش', 'ساعات جيب', 'ظروف فيكتورية', 'هدايا كلاسيكية', 'تسوق العراق']
+            : ['Victorian Iraq', 'victorian notebooks', 'quill pens', 'pocket watches', 'vintage envelopes', 'classic gifts', 'shop Iraq']
+        }
+        jsonLd={featuredLD ?? undefined}
+      />
       {settingsLoading ? (
         <HeroShimmer />
       ) : (
@@ -74,9 +111,11 @@ export function Home() {
             <>
               <img
                 src={heroImg}
-                alt=""
+                alt={settings.heroTitle || (isAr ? 'متجر فيكتوريان' : 'Victorian Store')}
                 className="absolute inset-0 h-full w-full object-cover"
                 onError={() => setHeroImageBroken(true)}
+                loading="eager"
+                decoding="async"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
             </>

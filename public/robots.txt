@@ -1,0 +1,21 @@
+# Victorian Store — robots.txt
+# يسمح للزواحف بالوصول إلى الصفحات العامة، ويمنعها من الصفحات الخاصة.
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /login
+Disallow: /cart
+Disallow: /checkout
+Disallow: /track
+Disallow: /api/
+Disallow: /uploads/
+# لا تفهرسة لنتائج البحث الديناميكية
+Disallow: /search?
+
+# توفير ميزانية الزحف
+Crawl-delay: 1
+
+# ── خرائط الموقع ──
+Sitemap: https://victorianiraq.com/sitemap.xml

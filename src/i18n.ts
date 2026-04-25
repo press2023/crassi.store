@@ -7,7 +7,7 @@ export const strings: Record<
   Record<string, string>
 > = {
   ar: {
-    brand: 'Victorian Store',
+    brand: 'Victorian Iraq',
     tagline: '',
     navHome: 'الرئيسية',
     navShop: 'التصنيفات',
@@ -47,8 +47,8 @@ export const strings: Record<
     lang: 'English',
     aboutTitle: 'من نحن',
     aboutBody:
-      'ننتقي لكم أزياءً أنيقة بروح العصر الفيكتوري: خامات فاخرة، تفاصيل راقية، وذوق كلاسيكي لا يبلى.',
-    heroTitle: 'Victorian Store',
+      'ننتقي لكم قطعاً أصيلة بروح العصر الفيكتوري: دفاتر يوميات، أقلام ريش، ساعات جيب، ظروف وهدايا كلاسيكية. خامات فاخرة وتفاصيل راقية وذوق لا يبلى.',
+    heroTitle: 'Victorian Iraq',
     heroSubtitle: '',
     notFound: 'الصفحة غير موجودة',
     home: 'العودة للرئيسية',
@@ -110,7 +110,7 @@ export const strings: Record<
     visitorsUniqueHint: 'يُحسب كل متصفح كزائر فريد مرة واحدة.',
   },
   en: {
-    brand: 'Victorian Store',
+    brand: 'Victorian Iraq',
     tagline: '',
     navHome: 'Home',
     navShop: 'Categories',
@@ -150,8 +150,8 @@ export const strings: Record<
     lang: 'العربية',
     aboutTitle: 'The Victorian Story',
     aboutBody:
-      'Curated garments inspired by the Victorian era — refined fabrics, regal details, and timeless taste.',
-    heroTitle: 'Victorian Store',
+      'Curated pieces inspired by the Victorian era — journal notebooks, quill pens, pocket watches, vintage envelopes and classic gifts. Refined materials, regal details, and timeless taste.',
+    heroTitle: 'Victorian Iraq',
     heroSubtitle: '',
     notFound: 'Page not found',
     home: 'Back home',

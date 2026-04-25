@@ -11,6 +11,7 @@ import {
   Trash2,
   User,
 } from 'lucide-react'
+import { SEO } from '../components/SEO'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import { formatDateNumeric, formatNumberEn, formatTimeArabic12Baghdad } from '../lib/formatDigits'
@@ -155,6 +156,7 @@ export function AdminOrder() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
+      <SEO title={isAr ? 'تفاصيل الطلب' : 'Order Details'} lang={isAr ? 'ar' : 'en'} noindex />
       {/* Back + delete */}
       <div className="mb-5 flex items-center justify-between gap-3">
         <Link

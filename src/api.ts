@@ -27,10 +27,13 @@ export async function fetchCategoryBySlug(slug: string): Promise<Category | null
 export async function fetchProducts(params?: {
   category?: string
   q?: string
+  /** عند true: المنتجات التي عليها تخفيض ساري فقط */
+  sale?: boolean
 }): Promise<Product[]> {
   const qs = new URLSearchParams()
   if (params?.category) qs.set('category', params.category)
   if (params?.q) qs.set('q', params.q)
+  if (params?.sale) qs.set('sale', '1')
   const tail = qs.toString()
   const res = await fetch(`${base}/api/products${tail ? `?${tail}` : ''}`)
   return parseJson<Product[]>(res)
@@ -49,6 +52,8 @@ export type SiteSettings = {
   aboutBodyAr?: string
   aboutTitleEn?: string
   aboutBodyEn?: string
+  /** صورة بانر صفحة التخفيضات /sale (تحلّ محل اللوحة الوردية الافتراضية) */
+  saleBannerImage?: string
 }
 
 export async function fetchSettings(): Promise<SiteSettings> {

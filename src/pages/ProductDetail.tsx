@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Check, ChevronRight, Home, Minus, Plus, ShoppingBag, Share2 } from 'lucide-react'
-import { fetchProductBySlug, fetchProducts } from '../api'
+import { fetchProductBySlug, fetchProducts, fetchReviews } from '../api'
 import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
 import { ProductCard } from '../components/ProductCard'
 import { ProductCardShimmer, ProductDetailShimmer } from '../components/Shimmer'
 import { ImageViewer } from '../components/ImageViewer'
+import { SEO } from '../components/SEO'
+import { breadcrumbLD, buildCanonical, productLD } from '../lib/seo'
 import { formatNumberEn } from '../lib/formatDigits'
+import { getPricing } from '../lib/price'
 import type { Product } from '../types'
 
 export function ProductDetail() {
@@ -24,6 +27,19 @@ export function ProductDetail() {
   const [qty, setQty] = useState(1)
   const [selectedSize, setSelectedSize] = useState('')
   const [added, setAdded] = useState(false)
+  const [siteRating, setSiteRating] = useState<{ value: number; count: number } | null>(null)
+
+  // متوسط تقييم الموقع — يُستخدم في AggregateRating لمنتجات الموقع
+  useEffect(() => {
+    let ok = true
+    fetchReviews()
+      .then((r) => {
+        if (!ok) return
+        if (r.count > 0 && r.average > 0) setSiteRating({ value: r.average, count: r.count })
+      })
+      .catch(() => {})
+    return () => { ok = false }
+  }, [])
 
   useEffect(() => {
     if (!slug) return
@@ -75,6 +91,42 @@ export function ProductDetail() {
     setImgKey((k) => k + 1)
   }, [product])
 
+  // ── Hooks: لا بدّ من استدعائها قبل أي return مبكّر ──
+  const seoLD = useMemo(() => {
+    if (!product) return undefined
+    const canonicalUrl = buildCanonical(`/product/${product.slug}`)
+    const tt = isAr ? product.nameAr : product.name
+    return [
+      productLD(
+        {
+          id: product.id,
+          slug: product.slug,
+          name: product.name,
+          nameAr: product.nameAr,
+          description: product.description,
+          descriptionAr: product.descriptionAr,
+          price: product.price,
+          images: product.images,
+          sizes: product.sizes,
+          stock: product.stock,
+          category: product.category ?? null,
+        },
+        { isAr, canonical: canonicalUrl, rating: siteRating },
+      ),
+      breadcrumbLD([
+        { name: isAr ? 'الرئيسية' : 'Home', url: buildCanonical('/') },
+        { name: isAr ? 'المنتجات' : 'Products', url: buildCanonical('/products') },
+        ...(product.category
+          ? [{
+              name: isAr ? product.category.nameAr : product.category.name,
+              url: buildCanonical(`/category/${product.category.slug}`),
+            }]
+          : []),
+        { name: tt, url: canonicalUrl },
+      ]),
+    ]
+  }, [product, isAr, siteRating])
+
   if (err || !slug) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-20 text-center">
@@ -91,6 +143,10 @@ export function ProductDetail() {
   const images = product.images
   const canBuy = product.stock > 0
   const maxQty = Math.max(1, product.stock)
+  const pricing = getPricing(product)
+
+  const priceFormatted = `${pricing.effective.toLocaleString('en-US')} IQD`
+  const seoDesc = `${priceFormatted}${pricing.hasDiscount ? ` (خصم ${pricing.discountPercent}٪)` : ''} — ${desc || (isAr ? 'منتج فيكتوري راقٍ' : 'A refined Victorian product')}`
 
   const handleShare = async () => {
     const url = window.location.href
@@ -112,24 +168,59 @@ export function ProductDetail() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
-      {/* Breadcrumb */}
-      <nav className="mb-6 flex items-center gap-1.5 text-sm text-victorian-500 dark:text-cream-300" dir={isAr ? 'rtl' : 'ltr'}>
-        <Link to="/" className="inline-flex items-center gap-1 transition hover:text-burgundy-700 dark:hover:text-victorian-300">
-          <Home className="h-3.5 w-3.5" />
-          <span>{isAr ? 'الرئيسية' : 'Home'}</span>
+      <SEO
+        title={title}
+        description={seoDesc}
+        image={images[0] ?? null}
+        type="product"
+        lang={isAr ? 'ar' : 'en'}
+        productPrice={product.price}
+        productAvailability={canBuy ? 'in stock' : 'out of stock'}
+        keywords={[
+          title,
+          product.category ? (isAr ? product.category.nameAr : product.category.name) : '',
+          isAr ? 'متجر فيكتوريان' : 'Victorian Iraq',
+          ...(product.sizes || []),
+        ].filter(Boolean) as string[]}
+        jsonLd={seoLD}
+      />
+      {/* Breadcrumb — صفّ واحد دائماً، اسم المنتج يُقصّ بـ … */}
+      <nav
+        className="mb-6 flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden text-sm text-victorian-500 dark:text-cream-300"
+        dir={isAr ? 'rtl' : 'ltr'}
+        aria-label={isAr ? 'مسار التنقّل' : 'Breadcrumb'}
+      >
+        <Link
+          to="/"
+          className="inline-flex shrink-0 items-center gap-1 transition hover:text-burgundy-700 dark:hover:text-victorian-300"
+        >
+          <Home className="h-3.5 w-3.5 shrink-0" />
+          <span className="hidden sm:inline">{isAr ? 'الرئيسية' : 'Home'}</span>
         </Link>
-        <ChevronRight className={`h-3.5 w-3.5 ${isAr ? 'rotate-180' : ''}`} />
+        <ChevronRight className={`h-3.5 w-3.5 shrink-0 ${isAr ? 'rotate-180' : ''}`} />
         {product.category ? (
-          <Link to={`/products?category=${product.category.slug}`} className="transition hover:text-burgundy-700 dark:hover:text-victorian-300">
+          <Link
+            to={`/products?category=${product.category.slug}`}
+            className="max-w-[40%] shrink-0 truncate transition hover:text-burgundy-700 dark:hover:text-victorian-300"
+            title={isAr ? product.category.nameAr : product.category.name}
+          >
             {isAr ? product.category.nameAr : product.category.name}
           </Link>
         ) : (
-          <Link to="/products" className="transition hover:text-burgundy-700 dark:hover:text-victorian-300">
+          <Link
+            to="/products"
+            className="shrink-0 transition hover:text-burgundy-700 dark:hover:text-victorian-300"
+          >
             {isAr ? 'المنتجات' : 'Products'}
           </Link>
         )}
-        <ChevronRight className={`h-3.5 w-3.5 ${isAr ? 'rotate-180' : ''}`} />
-        <span className="font-medium text-victorian-900 dark:text-cream-50 line-clamp-1">{title}</span>
+        <ChevronRight className={`h-3.5 w-3.5 shrink-0 ${isAr ? 'rotate-180' : ''}`} />
+        <span
+          className="min-w-0 flex-1 truncate font-medium text-victorian-900 dark:text-cream-50"
+          title={title}
+        >
+          {title}
+        </span>
       </nav>
 
       {/* Main product area */}
@@ -145,8 +236,10 @@ export function ProductDetail() {
                 <img
                   key={imgKey}
                   src={images[activeImg]}
-                  alt=""
+                  alt={`${title}${product.category ? ` — ${isAr ? product.category.nameAr : product.category.name}` : ''}`}
                   className="img-fade aspect-[4/5] w-full cursor-zoom-in object-cover"
+                  loading="eager"
+                  decoding="async"
                 />
               </button>
             )}
@@ -163,7 +256,13 @@ export function ProductDetail() {
                         : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={img}
+                      alt={`${title} — ${isAr ? 'عرض' : 'view'} ${i + 1}`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </button>
                 ))}
               </div>
@@ -176,13 +275,29 @@ export function ProductDetail() {
             {title}
           </h1>
 
-          <div className="mt-4 flex items-baseline gap-2" dir={isAr ? 'rtl' : 'ltr'}>
-            <span className="font-display text-3xl font-bold text-burgundy-700 dark:text-victorian-300 sm:text-4xl">
-              {formatNumberEn(Number(product.price))}
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1" dir={isAr ? 'rtl' : 'ltr'}>
+            <span
+              className={`font-display text-3xl font-bold sm:text-4xl ${
+                pricing.hasDiscount
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-burgundy-700 dark:text-victorian-300'
+              }`}
+            >
+              {formatNumberEn(pricing.effective)}
             </span>
             <span className="font-display text-sm font-semibold uppercase tracking-widest text-victorian-500">
               {isAr ? 'د.ع' : 'IQD'}
             </span>
+            {pricing.hasDiscount && (
+              <>
+                <span className="font-display text-lg font-medium text-victorian-500 line-through tabular-nums dark:text-victorian-400 sm:text-xl">
+                  {formatNumberEn(pricing.original)}
+                </span>
+                <span className="rounded-full bg-rose-600 px-2.5 py-0.5 text-xs font-bold text-white shadow-sm">
+                  {isAr ? `وفّر ${pricing.discountPercent}٪` : `Save ${pricing.discountPercent}%`}
+                </span>
+              </>
+            )}
           </div>
 
           <div className="mt-4">
@@ -232,7 +347,7 @@ export function ProductDetail() {
                   name: product.name,
                   nameAr: product.nameAr,
                   image: images[0] ?? '',
-                  price: product.price,
+                  price: pricing.effectiveStr,
                   size: selectedSize,
                   quantity: qty,
                 })

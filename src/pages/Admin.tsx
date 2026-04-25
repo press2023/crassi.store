@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
   Calendar,
@@ -12,6 +12,7 @@ import {
   MapPin,
   MessageCircle,
   Package,
+  Percent,
   Phone,
   Plus,
   Square,
@@ -21,6 +22,7 @@ import {
   Shield,
   X,
 } from 'lucide-react'
+import { SEO } from '../components/SEO'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import {
@@ -30,11 +32,12 @@ import {
   formatTimeArabic12Baghdad,
 } from '../lib/formatDigits'
 import { uploadImageFile } from '../lib/uploadImage'
+import { getPricing } from '../lib/price'
 import type { Category, Product } from '../types'
 
 const base = import.meta.env.VITE_API_BASE ?? ''
 
-type Tab = 'categories' | 'products' | 'orders' | 'site' | 'reviews' | 'admins'
+type Tab = 'categories' | 'products' | 'sale' | 'orders' | 'site' | 'reviews' | 'admins'
 
 type OrderItem = {
   id: string
@@ -120,6 +123,7 @@ export function Admin() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
+      <SEO title={isAr ? 'لوحة التحكم' : 'Admin Dashboard'} lang={isAr ? 'ar' : 'en'} noindex />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold uppercase tracking-[0.2em] text-victorian-900 dark:text-cream-50">{isAr ? 'لوحة التحكم' : 'Dashboard'}</h1>
@@ -134,6 +138,7 @@ export function Admin() {
       <div className="mb-8 flex gap-2 overflow-x-auto pb-1">
         {(isSuperAdmin || permissions.includes('orders')) && tabBtn('orders', <ClipboardList className="h-4 w-4" />, isAr ? 'الطلبات' : 'Orders')}
         {(isSuperAdmin || permissions.includes('products')) && tabBtn('products', <Package className="h-4 w-4" />, isAr ? 'المنتجات' : 'Products')}
+        {(isSuperAdmin || permissions.includes('products')) && tabBtn('sale', <Percent className="h-4 w-4" />, isAr ? 'التخفيضات' : 'Sale')}
         {(isSuperAdmin || permissions.includes('categories')) && tabBtn('categories', <Tag className="h-4 w-4" />, isAr ? 'التصنيفات' : 'Categories')}
         {(isSuperAdmin || permissions.includes('site_settings')) && tabBtn('site', <ImageIcon className="h-4 w-4" />, isAr ? 'إعدادات الموقع' : 'Site')}
         {(isSuperAdmin || permissions.includes('reviews')) && tabBtn('reviews', <MessageCircle className="h-4 w-4" />, isAr ? 'التعليقات' : 'Reviews')}
@@ -142,6 +147,7 @@ export function Admin() {
 
       {(isSuperAdmin || permissions.includes('categories')) && tab === 'categories' && <CategoriesTab token={token!} categories={categories} isAr={isAr} reload={load} />}
       {(isSuperAdmin || permissions.includes('products')) && tab === 'products' && <ProductsTab token={token!} products={products} categories={categories} isAr={isAr} reload={load} />}
+      {(isSuperAdmin || permissions.includes('products')) && tab === 'sale' && <SaleTab products={products} isAr={isAr} />}
       {(isSuperAdmin || permissions.includes('orders')) && tab === 'orders' && <OrdersTab token={token!} orders={orders} isAr={isAr} reload={load} />}
       {(isSuperAdmin || permissions.includes('site_settings')) && tab === 'site' && <SiteTab token={token!} isAr={isAr} />}
       {(isSuperAdmin || permissions.includes('reviews')) && tab === 'reviews' && <ReviewsTab token={token!} isAr={isAr} />}
@@ -198,6 +204,12 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
   const [aboutBodyAr, setAboutBodyAr] = useState<string>('')
   const [aboutTitleEn, setAboutTitleEn] = useState<string>('')
   const [aboutBodyEn, setAboutBodyEn] = useState<string>('')
+  // ── بانر صفحة التخفيضات ──
+  const [saleBannerUrl, setSaleBannerUrl] = useState<string>('')
+  const [pendingSaleBanner, setPendingSaleBanner] = useState<{ file: File; preview: string } | null>(null)
+  const pendingSaleBannerRef = useRef(pendingSaleBanner)
+  pendingSaleBannerRef.current = pendingSaleBanner
+  const saleBannerFileRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -212,6 +224,7 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
         aboutBodyAr?: string
         aboutTitleEn?: string
         aboutBodyEn?: string
+        saleBannerImage?: string
       }) => {
         setHeroUrl(s.heroImage ?? '')
         setHeroTitle(s.heroTitle ?? '')
@@ -219,6 +232,7 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
         setAboutBodyAr(s.aboutBodyAr ?? '')
         setAboutTitleEn(s.aboutTitleEn ?? '')
         setAboutBodyEn(s.aboutBodyEn ?? '')
+        setSaleBannerUrl(s.saleBannerImage ?? '')
       })
       .catch(() => { /* ignore */ })
   }, [])
@@ -227,6 +241,8 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
     return () => {
       const p = pendingHeroRef.current
       if (p) URL.revokeObjectURL(p.preview)
+      const sp = pendingSaleBannerRef.current
+      if (sp) URL.revokeObjectURL(sp.preview)
     }
   }, [])
 
@@ -242,6 +258,20 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
     if (pendingHero) URL.revokeObjectURL(pendingHero.preview)
     setPendingHero(null)
     setHeroUrl('')
+  }
+
+  const onPickSaleBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    if (pendingSaleBanner) URL.revokeObjectURL(pendingSaleBanner.preview)
+    setPendingSaleBanner({ file: f, preview: URL.createObjectURL(f) })
+    if (saleBannerFileRef.current) saleBannerFileRef.current.value = ''
+  }
+
+  const clearSaleBanner = () => {
+    if (pendingSaleBanner) URL.revokeObjectURL(pendingSaleBanner.preview)
+    setPendingSaleBanner(null)
+    setSaleBannerUrl('')
   }
 
   const save = async () => {
@@ -260,6 +290,18 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
         setPendingHero(null)
         heroImagePayload = url
       }
+      let saleBannerPayload: string | null = saleBannerUrl || null
+      if (pendingSaleBanner) {
+        const url = await uploadImageFile(base, token, pendingSaleBanner.file, `sale-banner-${Date.now()}`)
+        if (!url) {
+          setMsg(isAr ? '✗ تعذر رفع صورة بانر التخفيضات' : '✗ Sale banner upload failed')
+          setSaving(false)
+          return
+        }
+        URL.revokeObjectURL(pendingSaleBanner.preview)
+        setPendingSaleBanner(null)
+        saleBannerPayload = url
+      }
       const res = await api('/api/admin/settings', token, {
         method: 'PUT',
         body: JSON.stringify({
@@ -269,11 +311,13 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
           aboutBodyAr: aboutBodyAr || null,
           aboutTitleEn: aboutTitleEn || null,
           aboutBodyEn: aboutBodyEn || null,
+          saleBannerImage: saleBannerPayload,
         }),
       })
       if (res.ok) {
         const map = (await res.json()) as Record<string, string>
         setHeroUrl(map.heroImage ?? '')
+        setSaleBannerUrl(map.saleBannerImage ?? '')
         setMsg(isAr ? '✓ تم الحفظ' : '✓ Saved')
       } else setMsg(isAr ? '✗ تعذر الحفظ' : '✗ Save failed')
     } catch {
@@ -326,6 +370,65 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
               >
                 <Trash2 className="h-4 w-4" />
                 {isAr ? 'إزالة الصورة' : 'Remove image'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* بانر صفحة التخفيضات /sale */}
+      <div className="border border-rose-200 bg-rose-50/40 p-5 dark:border-rose-900/40 dark:bg-rose-950/20">
+        <h2 className="mb-1 font-display text-lg font-bold text-rose-700 dark:text-rose-300">
+          {isAr ? 'بانر صفحة التخفيضات' : 'Sale page banner'}
+        </h2>
+        <p className="mb-4 text-xs text-victorian-600 dark:text-cream-300">
+          {isAr
+            ? 'الصورة التي تظهر أعلى صفحة /التخفيضات. لو تركتها فارغة، تظهر اللوحة الوردية الافتراضية. أبعاد مقترحة: 1920×600.'
+            : 'The image at the top of the /sale page. Leave empty to use the default rose banner. Suggested 1920×600.'}
+        </p>
+
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="h-36 w-64 shrink-0 overflow-hidden rounded-md border border-victorian-300 bg-victorian-100 dark:border-victorian-700 dark:bg-victorian-900">
+            {pendingSaleBanner?.preview || saleBannerUrl ? (
+              <img
+                src={pendingSaleBanner?.preview ?? saleBannerUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center bg-gradient-to-br from-rose-700 via-rose-600 to-burgundy-900 text-cream-50">
+                <ImageIcon className="h-8 w-8" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-2 border border-victorian-300 px-4 py-2 text-sm text-victorian-700 hover:bg-victorian-100 dark:border-victorian-700 dark:text-cream-200 dark:hover:bg-victorian-900">
+              <ImagePlus className="h-4 w-4" />
+              {isAr
+                ? (pendingSaleBanner || saleBannerUrl ? 'تغيير صورة البانر' : 'اختيار صورة (تُرفع عند الحفظ)')
+                : (pendingSaleBanner || saleBannerUrl ? 'Change banner image' : 'Pick image (uploads on save)')}
+              <input
+                ref={saleBannerFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onPickSaleBanner}
+              />
+            </label>
+            {pendingSaleBanner && (
+              <p className="text-xs text-victorian-500">
+                {isAr ? 'معاينة محلية — اضغط «حفظ التغييرات» لرفعها.' : 'Local preview — click Save to upload.'}
+              </p>
+            )}
+            {(saleBannerUrl || pendingSaleBanner) && (
+              <button
+                type="button"
+                onClick={clearSaleBanner}
+                className="inline-flex items-center gap-2 border border-burgundy-300 px-4 py-2 text-sm text-burgundy-700 hover:bg-burgundy-50 dark:border-burgundy-800 dark:text-burgundy-300 dark:hover:bg-burgundy-900/30"
+              >
+                <Trash2 className="h-4 w-4" />
+                {isAr ? 'إزالة الصورة (الرجوع للوحة الافتراضية)' : 'Remove image (use default banner)'}
               </button>
             )}
           </div>
@@ -831,6 +934,100 @@ function ProductsTab({ token, products, categories, isAr, reload }: { token: str
         })}
         {filtered.length === 0 && <p className="py-8 text-center text-sm text-victorian-400">{isAr ? 'لا توجد منتجات' : 'No products'}</p>}
       </div>
+    </div>
+  )
+}
+
+/* ─── Sale (discounted products, display order) ─────── */
+
+function SaleTab({ products, isAr }: { products: Product[]; isAr: boolean }) {
+  const rows = useMemo(() => {
+    const onSale = products.filter((p) => getPricing(p).hasDiscount)
+    return [...onSale].sort((a, b) => {
+      const da = getPricing(a).discountPercent
+      const db = getPricing(b).discountPercent
+      if (db !== da) return db - da
+      return (isAr ? a.nameAr : a.name).localeCompare(isAr ? b.nameAr : b.name, isAr ? 'ar' : 'en')
+    })
+  }, [products, isAr])
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-victorian-600 dark:text-cream-300">
+          {isAr
+            ? 'الترتيب من الأعلى خصمًا كما تظهر المنتجات في صفحة التخفيضات للزوار. استخدم تعديل المنتج لتغيير السعر المخفّض.'
+            : 'Sorted from highest discount to lowest, same as the public /sale page. Edit a product to change its sale price.'}
+        </p>
+        <Link
+          to="/sale"
+          className="shrink-0 text-sm font-semibold text-burgundy-700 underline decoration-burgundy-300 underline-offset-2 hover:text-burgundy-800 dark:text-burgundy-400"
+        >
+          {isAr ? 'معاينة صفحة التخفيضات ←' : 'View sale page →'}
+        </Link>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="py-10 text-center text-sm text-victorian-500">
+          {isAr ? 'لا يوجد منتج مخفّض حالياً. اضبط سعر تخفيض في «المنتجات» أو عند تعديل منتج.' : 'No discounted products. Set a sale price in Products or when editing a product.'}
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded border border-victorian-200 dark:border-victorian-800">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead className="border-b border-victorian-200 bg-victorian-50 font-display text-[10px] font-semibold uppercase tracking-[0.15em] text-victorian-600 dark:border-victorian-800 dark:bg-victorian-900/50 dark:text-cream-300">
+              <tr>
+                <th className="w-10 px-3 py-2 text-center">#</th>
+                <th className="w-12 px-2 py-2" />
+                <th className="px-3 py-2">{isAr ? 'المنتج' : 'Product'}</th>
+                <th className="px-3 py-2">{isAr ? 'التصنيف' : 'Category'}</th>
+                <th className="px-3 py-2 whitespace-nowrap">{isAr ? 'الأصل' : 'Original'}</th>
+                <th className="px-3 py-2 whitespace-nowrap">{isAr ? 'بعد الخصم' : 'Sale'}</th>
+                <th className="px-3 py-2 text-center">%</th>
+                <th className="w-10 px-2 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-victorian-200 dark:divide-victorian-800">
+              {rows.map((p, i) => {
+                const pr = getPricing(p)
+                return (
+                  <tr key={p.id} className="bg-cream-50/30 dark:bg-victorian-950/20">
+                    <td className="px-3 py-2 text-center tabular-nums text-victorian-500">{i + 1}</td>
+                    <td className="px-2 py-2">
+                      <div className="h-11 w-11 overflow-hidden bg-victorian-100 dark:bg-victorian-900">
+                        {p.images[0] ? <img src={p.images[0]} alt="" className="h-full w-full object-cover" loading="lazy" /> : null}
+                      </div>
+                    </td>
+                    <td className="max-w-[200px] px-3 py-2 font-medium text-victorian-900 dark:text-cream-100">
+                      {isAr ? p.nameAr : p.name}
+                    </td>
+                    <td className="px-3 py-2 text-victorian-600 dark:text-cream-300">
+                      {p.category?.nameAr ?? '—'}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-victorian-500 line-through">
+                      {formatNumberEn(pr.original)} <span className="text-xs">IQD</span>
+                    </td>
+                    <td className="px-3 py-2 tabular-nums font-semibold text-burgundy-800 dark:text-burgundy-300">
+                      {formatNumberEn(pr.effective)} <span className="text-xs">IQD</span>
+                    </td>
+                    <td className="px-3 py-2 text-center tabular-nums text-burgundy-700 dark:text-burgundy-400">
+                      −{pr.discountPercent}%
+                    </td>
+                    <td className="px-2 py-2">
+                      <Link
+                        to={`/admin/product/${p.id}`}
+                        className="inline-flex border border-victorian-300 p-2 text-victorian-600 hover:bg-victorian-100 dark:border-victorian-700 dark:hover:bg-victorian-900"
+                        title={isAr ? 'تعديل' : 'Edit'}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { ArrowRight, Search as SearchIcon } from 'lucide-react'
 import { fetchCategories, fetchProducts } from '../api'
 import { ProductCard } from '../components/ProductCard'
 import { ProductGridShimmer } from '../components/Shimmer'
+import { SEO } from '../components/SEO'
 import { useLanguage } from '../context/LanguageContext'
 import type { Category, Product } from '../types'
 
@@ -90,6 +91,21 @@ export function Search() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
+      <SEO
+        title={
+          urlQ.trim()
+            ? (isAr ? `بحث: ${urlQ}` : `Search: ${urlQ}`)
+            : (isAr ? 'بحث في المنتجات' : 'Search Products')
+        }
+        description={
+          isAr
+            ? 'ابحث عن منتجات متجر فيكتوريان حسب الاسم أو التصنيف.'
+            : 'Search Victorian Store products by name or category.'
+        }
+        lang={isAr ? 'ar' : 'en'}
+        // صفحات البحث ذات الكويري المتغيّر لا تُفهرس عادة
+        noindex={urlQ.trim().length > 0 || urlCategory.length > 0}
+      />
       <div className="flex items-center justify-between gap-3">
         <h1 className="font-display text-xl font-bold text-victorian-900 dark:text-cream-50 sm:text-2xl">
           {t('searchPageTitle')}

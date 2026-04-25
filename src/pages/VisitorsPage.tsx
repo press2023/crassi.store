@@ -1,4 +1,5 @@
 import { Users } from 'lucide-react'
+import { SEO } from '../components/SEO'
 import { useLanguage } from '../context/LanguageContext'
 import { useVisitorStats } from '../context/VisitorContext'
 import { formatNumberEn } from '../lib/formatDigits'
@@ -15,6 +16,7 @@ export function VisitorsPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+      <SEO title={t('visitorsPageTitle')} description={t('visitorsPageSubtitle')} />
       <div className="mb-10 text-center">
         <p className="font-display text-[11px] font-semibold uppercase tracking-[0.35em] text-burgundy-700 dark:text-victorian-300">
           {t('visitorsPageKicker')}

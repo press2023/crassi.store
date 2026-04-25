@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   Star,
   MapPin,
+  Tag,
   Eye,
   LogIn,
   User,
@@ -63,6 +64,15 @@ export function SiteSidebar() {
         <NavLink to="/products" className={itemClass}>
           <LayoutGrid className="h-4 w-4 shrink-0" />
           {t('navShop')}
+        </NavLink>
+        <NavLink to="/sale" className={itemClass}>
+          <Tag className="h-4 w-4 shrink-0" />
+          <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+            {isAr ? 'التخفيضات' : 'Sale'}
+            <span className="rounded-full bg-rose-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+              {isAr ? 'حار' : 'HOT'}
+            </span>
+          </span>
         </NavLink>
         <NavLink to="/search" className={itemClass}>
           <Search className="h-4 w-4 shrink-0" />

@@ -20,7 +20,8 @@ const isProd = process.env.NODE_ENV === 'production'
 const PORT = Number(process.env.PORT) || 3001
 const distDir = path.join(__dirname, '..', 'dist')
 
-const STORE_OG_NAME = 'Victorian Store'
+const STORE_OG_NAME = 'Victorian Iraq'
+const STORE_OG_NAME_AR = 'متجر فيكتوريان'
 
 /** Escape text for use inside HTML double-quoted attributes */
 function escapeHtmlAttr(s: string): string {
@@ -29,6 +30,21 @@ function escapeHtmlAttr(s: string): string {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
+
+/** Escape XML text node */
+function escapeXml(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+/** Safe JSON-LD (escape `</` to prevent script breakouts). */
+function safeJsonLd(obj: unknown): string {
+  return JSON.stringify(obj).replace(/<\/(script)/gi, '<\\/$1')
 }
 
 function siteOriginFromReq(req: express.Request): string {
@@ -81,19 +97,21 @@ app.use('/api/reviews', reviewsRoutes)
 
 function serializeProduct(p: {
   price: { toString(): string }
+  salePrice?: { toString(): string } | null
   category?: { id: string; slug: string; name: string; nameAr: string }
   [key: string]: unknown
 }) {
-  const { price, category, ...rest } = p
+  const { price, salePrice, category, ...rest } = p
   return {
     ...rest,
     price: price.toString(),
+    salePrice: salePrice != null ? salePrice.toString() : null,
     category,
   }
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'classi.store' })
+  res.json({ ok: true, service: 'victorianiraq.com' })
 })
 
 app.get('/api/categories', async (_req, res) => {
@@ -109,10 +127,12 @@ app.get('/api/categories', async (_req, res) => {
 app.get('/api/products', async (req, res) => {
   const category = typeof req.query.category === 'string' ? req.query.category : undefined
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
+  const onSaleOnly = req.query.sale === '1' || req.query.sale === 'true'
   try {
     const rows = await prisma.product.findMany({
       where: {
         ...(category ? { category: { slug: category } } : {}),
+        ...(onSaleOnly ? { salePrice: { not: null } } : {}),
         ...(q
           ? {
               OR: [
@@ -125,7 +145,11 @@ app.get('/api/products', async (req, res) => {
       include: { category: true },
       orderBy: [{ featured: 'desc' }, { name: 'asc' }],
     })
-    res.json(rows.map(serializeProduct))
+    // فلترة إضافية: التخفيض الفعّال فقط (salePrice أصغر من price)
+    const filtered = onSaleOnly
+      ? rows.filter((p) => p.salePrice != null && Number(p.salePrice) > 0 && Number(p.salePrice) < Number(p.price))
+      : rows
+    res.json(filtered.map(serializeProduct))
   } catch (e) {
     console.error(e)
     res.status(503).json({ error: 'database_unavailable' })
@@ -188,7 +212,10 @@ app.post('/api/orders', async (req, res) => {
         const product = await tx.product.findUnique({ where: { id: line.productId } })
         if (!product) throw new Error('product_not_found')
         if (product.stock < qty) throw new Error('insufficient_stock')
-        const unitPrice = product.price
+        // السعر الفعّال = sale لو ساري وأصغر من السعر الأصلي
+        const sale = product.salePrice
+        const useSale = sale != null && Number(sale) > 0 && Number(sale) < Number(product.price)
+        const unitPrice = useSale ? sale : product.price
         total = total.add(unitPrice.mul(qty))
         lineData.push({
           productId: product.id,
@@ -286,6 +313,105 @@ app.get('/api/orders/:id', async (req, res) => {
 const uploadsPublic = path.join(__dirname, '..', 'public', 'uploads')
 app.use('/uploads', express.static(uploadsPublic))
 
+// ── SEO: robots.txt (ديناميكي حتى يطابق sitemap الأصل الحالي) ─────────────
+app.get('/robots.txt', (req, res) => {
+  const origin = siteOriginFromReq(req)
+  const body = [
+    '# Victorian Store — robots.txt',
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /admin',
+    'Disallow: /admin/',
+    'Disallow: /login',
+    'Disallow: /cart',
+    'Disallow: /checkout',
+    'Disallow: /track',
+    'Disallow: /api/',
+    'Disallow: /uploads/',
+    'Disallow: /search?',
+    'Crawl-delay: 1',
+    '',
+    `Sitemap: ${origin}/sitemap.xml`,
+    '',
+  ].join('\n')
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader('Cache-Control', 'public, max-age=3600')
+  res.send(body)
+})
+
+// ── SEO: sitemap.xml ديناميكي (المنتجات + التصنيفات + الصفحات الثابتة) ───
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const origin = siteOriginFromReq(req)
+    const now = new Date().toISOString()
+    const staticPages: { path: string; priority: string; changefreq: string }[] = [
+      { path: '/', priority: '1.0', changefreq: 'daily' },
+      { path: '/products', priority: '0.9', changefreq: 'daily' },
+      { path: '/sale', priority: '0.95', changefreq: 'daily' },
+      { path: '/about', priority: '0.6', changefreq: 'monthly' },
+      { path: '/reviews', priority: '0.7', changefreq: 'weekly' },
+    ]
+
+    const [products, categories] = await Promise.all([
+      prisma.product.findMany({
+        select: { slug: true, images: true },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.category.findMany({ select: { slug: true } }),
+    ])
+
+    const urls: string[] = []
+    for (const sp of staticPages) {
+      urls.push(
+        `<url><loc>${escapeXml(`${origin}${sp.path}`)}</loc>` +
+          `<lastmod>${now}</lastmod>` +
+          `<changefreq>${sp.changefreq}</changefreq>` +
+          `<priority>${sp.priority}</priority>` +
+          `<xhtml:link rel="alternate" hreflang="ar" href="${escapeXml(`${origin}${sp.path}`)}"/>` +
+          `<xhtml:link rel="alternate" hreflang="en" href="${escapeXml(`${origin}${sp.path}${sp.path.includes('?') ? '&' : '?'}lang=en`)}"/>` +
+          `<xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(`${origin}${sp.path}`)}"/>` +
+          `</url>`,
+      )
+    }
+    for (const c of categories) {
+      const u = `${origin}/category/${encodeURIComponent(c.slug)}`
+      urls.push(
+        `<url><loc>${escapeXml(u)}</loc><lastmod>${now}</lastmod>` +
+          `<changefreq>weekly</changefreq><priority>0.8</priority></url>`,
+      )
+    }
+    for (const p of products) {
+      const u = `${origin}/product/${encodeURIComponent(p.slug)}`
+      const lastmod = now
+      const imageBlock = (p.images || [])
+        .slice(0, 5)
+        .map((img) => {
+          const abs = absoluteOgImageUrl(
+            img,
+            origin,
+            (process.env.PUBLIC_API_ORIGIN || '').trim().replace(/\/$/, '') || null,
+          )
+          return `<image:image><image:loc>${escapeXml(abs)}</image:loc></image:image>`
+        })
+        .join('')
+      urls.push(
+        `<url><loc>${escapeXml(u)}</loc><lastmod>${lastmod}</lastmod>` +
+          `<changefreq>weekly</changefreq><priority>0.9</priority>` +
+          imageBlock +
+          `</url>`,
+      )
+    }
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">${urls.join('')}</urlset>`
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8')
+    res.setHeader('Cache-Control', 'public, max-age=600')
+    res.send(xml)
+  } catch (e) {
+    console.error('sitemap error', e)
+    res.status(503).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>')
+  }
+})
+
 if (isProd) {
   app.use(express.static(distDir, { index: false })) // Disable serving index.html natively for root so we can inject meta tags if needed
   
@@ -293,39 +419,220 @@ if (isProd) {
     try {
       let html = await fs.promises.readFile(path.join(distDir, 'index.html'), 'utf8')
 
-      // If the request is for a product details page
+      const pageOrigin = siteOriginFromReq(req)
+      const publicApiOrigin = (process.env.PUBLIC_API_ORIGIN || '').trim().replace(/\/$/, '') || null
+
+      // ─── منتج ────────────────────────────────────────────────
       if (req.path.startsWith('/product/')) {
         const slug = req.path.split('/')[2]
         if (slug) {
-          const p = await prisma.product.findUnique({ where: { slug } })
+          const p = await prisma.product.findUnique({
+            where: { slug },
+            include: { category: true },
+          })
           if (p) {
-            const pageOrigin = siteOriginFromReq(req)
-            const publicApiOrigin = (process.env.PUBLIC_API_ORIGIN || '').trim().replace(/\/$/, '') || null
             const imgUrl = absoluteOgImageUrl(p.images[0], pageOrigin, publicApiOrigin)
             const canonical = `${pageOrigin}${req.path}`
             const titlePlain = String(p.nameAr || p.name)
+            const titleEn = String(p.name || p.nameAr)
             const descPlain = String(p.descriptionAr || p.description || '')
-            const priceStr = `${Number(p.price).toLocaleString('en-US')} IQD`
+            const originalNum = Number(p.price)
+            // التخفيض إن وُجد ساري (أصغر من السعر الأصلي)
+            const saleNum = p.salePrice != null ? Number(p.salePrice) : NaN
+            const onSale = Number.isFinite(saleNum) && saleNum > 0 && saleNum < originalNum
+            const effectiveNum = onSale ? saleNum : originalNum
+            const discountPct = onSale ? Math.max(1, Math.round(((originalNum - saleNum) / originalNum) * 100)) : 0
+            const priceStr = `${effectiveNum.toLocaleString('en-US')} IQD`
+            const availability = p.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+            const ogAvailability = p.stock > 0 ? 'in stock' : 'out of stock'
             const title = escapeHtmlAttr(titlePlain)
-            const desc = escapeHtmlAttr(`${priceStr} — ${descPlain}`.slice(0, 300))
+            const desc = escapeHtmlAttr(
+              `${priceStr}${onSale ? ` (خصم ${discountPct}٪)` : ''} — ${descPlain}`.slice(0, 300),
+            )
             const img = escapeHtmlAttr(imgUrl)
             const canonicalEsc = escapeHtmlAttr(canonical)
+            const titleTagFull = `${escapeHtmlAttr(titlePlain)} | ${STORE_OG_NAME}`
+
+            // متوسط تقييم الموقع (Aggregate لكل المتجر)
+            const ratingAgg = await prisma.review
+              .aggregate({
+                where: { approved: true },
+                _avg: { rating: true },
+                _count: { _all: true },
+              })
+              .catch(() => null)
+            const ratingValue = ratingAgg?._avg?.rating ?? 0
+            const reviewCount = ratingAgg?._count?._all ?? 0
+
+            // JSON-LD: Product
+            const productJsonLd: Record<string, unknown> = {
+              '@context': 'https://schema.org',
+              '@type': 'Product',
+              '@id': `${canonical}#product`,
+              name: titlePlain,
+              alternateName: titleEn,
+              sku: p.id,
+              mpn: p.slug,
+              description: descPlain,
+              image: (p.images || []).map((i) => absoluteOgImageUrl(i, pageOrigin, publicApiOrigin)),
+              brand: { '@type': 'Brand', name: STORE_OG_NAME },
+              category: p.category ? p.category.nameAr || p.category.name : undefined,
+              offers: {
+                '@type': 'Offer',
+                url: canonical,
+                priceCurrency: 'IQD',
+                price: String(effectiveNum),
+                availability,
+                itemCondition: 'https://schema.org/NewCondition',
+                seller: { '@type': 'Organization', name: STORE_OG_NAME },
+                ...(onSale
+                  ? {
+                      priceSpecification: {
+                        '@type': 'UnitPriceSpecification',
+                        priceType: 'https://schema.org/SalePrice',
+                        price: String(effectiveNum),
+                        priceCurrency: 'IQD',
+                        referencePrice: {
+                          '@type': 'UnitPriceSpecification',
+                          priceType: 'https://schema.org/ListPrice',
+                          price: String(originalNum),
+                          priceCurrency: 'IQD',
+                        },
+                      },
+                    }
+                  : {}),
+              },
+            }
+            if (p.sizes?.length) (productJsonLd as Record<string, unknown>).size = p.sizes
+            if (reviewCount > 0 && ratingValue > 0) {
+              ;(productJsonLd as Record<string, unknown>).aggregateRating = {
+                '@type': 'AggregateRating',
+                ratingValue: Number(ratingValue).toFixed(1),
+                reviewCount,
+                bestRating: 5,
+                worstRating: 1,
+              }
+            }
+
+            const breadcrumbsJsonLd = {
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'الرئيسية', item: `${pageOrigin}/` },
+                { '@type': 'ListItem', position: 2, name: 'المنتجات', item: `${pageOrigin}/products` },
+                ...(p.category
+                  ? [{
+                      '@type': 'ListItem',
+                      position: 3,
+                      name: p.category.nameAr || p.category.name,
+                      item: `${pageOrigin}/category/${p.category.slug}`,
+                    }]
+                  : []),
+                {
+                  '@type': 'ListItem',
+                  position: p.category ? 4 : 3,
+                  name: titlePlain,
+                  item: canonical,
+                },
+              ],
+            }
+
             const metaTags = `
-              <meta property="og:url" content="${canonicalEsc}" />
-              <meta property="og:title" content="${title} | ${STORE_OG_NAME}" />
-              <meta property="og:description" content="${desc}" />
-              <meta property="og:image" content="${img}" />
-              <meta property="og:type" content="product" />
-              <meta name="twitter:card" content="summary_large_image" />
-              <meta name="twitter:title" content="${title} | ${STORE_OG_NAME}" />
-              <meta name="twitter:description" content="${desc}" />
-              <meta name="twitter:image" content="${img}" />
+              <link rel="canonical" href="${canonicalEsc}" data-ssr="1" />
+              <link rel="alternate" hreflang="ar" href="${canonicalEsc}" data-ssr="1" />
+              <link rel="alternate" hreflang="en" href="${canonicalEsc}?lang=en" data-ssr="1" />
+              <link rel="alternate" hreflang="x-default" href="${canonicalEsc}" data-ssr="1" />
+              <meta name="description" content="${desc}" data-ssr="1" />
+              <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" data-ssr="1" />
+              <meta property="og:url" content="${canonicalEsc}" data-ssr="1" />
+              <meta property="og:title" content="${title} | ${STORE_OG_NAME}" data-ssr="1" />
+              <meta property="og:description" content="${desc}" data-ssr="1" />
+              <meta property="og:image" content="${img}" data-ssr="1" />
+              <meta property="og:image:alt" content="${title}" data-ssr="1" />
+              <meta property="og:type" content="product" data-ssr="1" />
+              <meta property="og:site_name" content="${STORE_OG_NAME}" data-ssr="1" />
+              <meta property="og:locale" content="ar_IQ" data-ssr="1" />
+              <meta property="og:locale:alternate" content="en_US" data-ssr="1" />
+              <meta property="product:price:amount" content="${escapeHtmlAttr(String(effectiveNum))}" data-ssr="1" />
+              <meta property="product:price:currency" content="IQD" data-ssr="1" />
+              <meta property="product:availability" content="${ogAvailability}" data-ssr="1" />
+              <meta name="twitter:card" content="summary_large_image" data-ssr="1" />
+              <meta name="twitter:title" content="${title} | ${STORE_OG_NAME}" data-ssr="1" />
+              <meta name="twitter:description" content="${desc}" data-ssr="1" />
+              <meta name="twitter:image" content="${img}" data-ssr="1" />
+              <script type="application/ld+json" data-ssr="product">${safeJsonLd(productJsonLd)}</script>
+              <script type="application/ld+json" data-ssr="breadcrumbs">${safeJsonLd(breadcrumbsJsonLd)}</script>
             `
             html = stripDuplicateOgImageMeta(html)
-            html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtmlAttr(titlePlain)} | ${STORE_OG_NAME}</title>`)
+            html = html.replace(/<title>[^<]*<\/title>/, `<title>${titleTagFull}</title>`)
+            html = html.replace(/<link\s+rel=["']canonical["'][^>]*>\s*/i, '')
             html = html.replace('</head>', `${metaTags}</head>`)
           }
         }
+      }
+      // ─── تصنيف ──────────────────────────────────────────────
+      else if (req.path.startsWith('/category/')) {
+        const slug = req.path.split('/')[2]
+        if (slug) {
+          const cat = await prisma.category.findUnique({ where: { slug } })
+          if (cat) {
+            const titlePlain = String(cat.nameAr || cat.name)
+            const canonical = `${pageOrigin}${req.path}`
+            const imgUrl = absoluteOgImageUrl(cat.image ?? '', pageOrigin, publicApiOrigin)
+            const descPlain = `تشكيلة ${titlePlain} في ${STORE_OG_NAME_AR} — منتجات أصلية بأسعار بالدينار العراقي وتوصيل لكل المحافظات.`
+            const desc = escapeHtmlAttr(descPlain.slice(0, 300))
+            const title = escapeHtmlAttr(titlePlain)
+            const img = escapeHtmlAttr(imgUrl)
+            const canonicalEsc = escapeHtmlAttr(canonical)
+
+            const collectionJsonLd = {
+              '@context': 'https://schema.org',
+              '@type': 'CollectionPage',
+              name: titlePlain,
+              description: descPlain,
+              url: canonical,
+              image: imgUrl,
+              isPartOf: { '@id': `${pageOrigin}/#website` },
+            }
+            const breadcrumbsJsonLd = {
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'الرئيسية', item: `${pageOrigin}/` },
+                { '@type': 'ListItem', position: 2, name: 'المنتجات', item: `${pageOrigin}/products` },
+                { '@type': 'ListItem', position: 3, name: titlePlain, item: canonical },
+              ],
+            }
+
+            const metaTags = `
+              <link rel="canonical" href="${canonicalEsc}" data-ssr="1" />
+              <meta name="description" content="${desc}" data-ssr="1" />
+              <meta property="og:url" content="${canonicalEsc}" data-ssr="1" />
+              <meta property="og:title" content="${title} | ${STORE_OG_NAME}" data-ssr="1" />
+              <meta property="og:description" content="${desc}" data-ssr="1" />
+              <meta property="og:image" content="${img}" data-ssr="1" />
+              <meta property="og:type" content="website" data-ssr="1" />
+              <meta name="twitter:card" content="summary_large_image" data-ssr="1" />
+              <meta name="twitter:title" content="${title} | ${STORE_OG_NAME}" data-ssr="1" />
+              <meta name="twitter:description" content="${desc}" data-ssr="1" />
+              <meta name="twitter:image" content="${img}" data-ssr="1" />
+              <script type="application/ld+json" data-ssr="collection">${safeJsonLd(collectionJsonLd)}</script>
+              <script type="application/ld+json" data-ssr="breadcrumbs">${safeJsonLd(breadcrumbsJsonLd)}</script>
+            `
+            html = stripDuplicateOgImageMeta(html)
+            html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtmlAttr(titlePlain)} | ${STORE_OG_NAME}</title>`)
+            html = html.replace(/<link\s+rel=["']canonical["'][^>]*>\s*/i, '')
+            html = html.replace('</head>', `${metaTags}</head>`)
+          }
+        }
+      }
+      // ─── canonical افتراضي لباقي الصفحات ────────────────────
+      else {
+        const canonical = `${pageOrigin}${req.path}`
+        html = html.replace(
+          /<link\s+rel=["']canonical["'][^>]*>/i,
+          `<link rel="canonical" href="${escapeHtmlAttr(canonical)}" />`,
+        )
       }
 
       res.send(html)

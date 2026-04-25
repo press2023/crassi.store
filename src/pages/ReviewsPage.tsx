@@ -5,6 +5,8 @@ import { createReview, deleteMyReview, fetchReviews } from '../api'
 import type { Review, ReviewCreated, ReviewsResponse } from '../api'
 import { ReviewCard, StarsDisplay, StarsInput } from '../components/ReviewsShared'
 import { ReviewsFormShimmer, ReviewsListShimmer, ReviewsRatingsShimmer } from '../components/Shimmer'
+import { SEO } from '../components/SEO'
+import { breadcrumbLD, buildCanonical, SITE_NAME } from '../lib/seo'
 
 const NAME_STORAGE_KEY = 'classi-review-name'
 const MY_REVIEW_ID_KEY = 'classi-my-review-id'
@@ -291,8 +293,44 @@ export function ReviewsPage() {
     myReviewId && myReviewInList && effectiveDeleteToken.length > 0,
   )
 
+  const reviewsUrl = buildCanonical('/reviews')
+  const reviewsLD = useMemo(() => {
+    const blocks: Record<string, unknown>[] = [
+      breadcrumbLD([
+        { name: isAr ? 'الرئيسية' : 'Home', url: buildCanonical('/') },
+        { name: isAr ? 'الآراء' : 'Reviews', url: reviewsUrl },
+      ]),
+    ]
+    if (data.count > 0 && data.average > 0) {
+      blocks.push({
+        '@context': 'https://schema.org',
+        '@type': 'AggregateRating',
+        itemReviewed: {
+          '@type': 'Organization',
+          name: SITE_NAME,
+          url: buildCanonical('/'),
+        },
+        ratingValue: data.average.toFixed(1),
+        reviewCount: data.count,
+        bestRating: 5,
+        worstRating: 1,
+      })
+    }
+    return blocks
+  }, [isAr, reviewsUrl, data.count, data.average])
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
+      <SEO
+        title={isAr ? 'آراء العملاء' : 'Customer Reviews'}
+        description={
+          isAr
+            ? 'اقرأ آراء وتقييمات عملاء متجر فيكتوريان وشاركنا رأيك.'
+            : 'Read customer reviews of Victorian Store and share your own.'
+        }
+        lang={isAr ? 'ar' : 'en'}
+        jsonLd={reviewsLD}
+      />
       <div className="mb-8 text-center">
         <p className="font-display text-[11px] font-semibold uppercase tracking-[0.35em] text-burgundy-700 dark:text-victorian-300">
           {t('reviewsPageKicker')}

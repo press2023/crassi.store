@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { fetchCategoryBySlug, fetchProducts } from '../api'
 import { ProductCard } from '../components/ProductCard'
 import { ProductGridShimmer } from '../components/Shimmer'
+import { SEO } from '../components/SEO'
 import { useLanguage } from '../context/LanguageContext'
+import { breadcrumbLD, buildCanonical, collectionPageLD, itemListLD } from '../lib/seo'
 import type { Category, Product } from '../types'
 
 export function CategoryPage() {
@@ -39,6 +41,39 @@ export function CategoryPage() {
     }
   }, [slug])
 
+  // ── Hooks: قبل أي return مبكّر ──
+  const seoLD = useMemo(() => {
+    if (!category) return undefined
+    const title = isAr ? category.nameAr : category.name
+    const url = buildCanonical(`/category/${category.slug}`)
+    const seoDesc = isAr
+      ? `تشكيلة ${title} في متجر فيكتوريان — منتجات أصلية بروح العصر الفيكتوري بأسعار بالدينار العراقي وتوصيل لكل المحافظات.`
+      : `Shop the ${title} collection at Victorian Iraq — authentic Victorian-inspired pieces, IQD prices and delivery across Iraq.`
+    return [
+      collectionPageLD({
+        name: title,
+        description: seoDesc,
+        url,
+        image: category.image ?? undefined,
+      }),
+      itemListLD({
+        name: title,
+        url,
+        items: products.slice(0, 30).map((p) => ({
+          slug: p.slug,
+          name: isAr ? p.nameAr : p.name,
+          image: p.images?.[0],
+          price: p.price,
+        })),
+      }),
+      breadcrumbLD([
+        { name: isAr ? 'الرئيسية' : 'Home', url: buildCanonical('/') },
+        { name: isAr ? 'المنتجات' : 'Products', url: buildCanonical('/products') },
+        { name: title, url },
+      ]),
+    ]
+  }, [category, products, isAr])
+
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
@@ -66,9 +101,24 @@ export function CategoryPage() {
   }
 
   const title = isAr ? category.nameAr : category.name
+  const seoDesc = isAr
+    ? `تشكيلة ${title} في متجر فيكتوريان — منتجات أصلية بروح العصر الفيكتوري بأسعار بالدينار العراقي وتوصيل لكل المحافظات.`
+    : `Shop the ${title} collection at Victorian Iraq — authentic Victorian-inspired pieces, IQD prices and delivery across Iraq.`
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
+      <SEO
+        title={title}
+        description={seoDesc}
+        image={category.image ?? null}
+        lang={isAr ? 'ar' : 'en'}
+        jsonLd={seoLD}
+        keywords={[
+          title,
+          isAr ? 'تسوق العراق' : 'shop Iraq',
+          isAr ? 'متجر فيكتوريان' : 'Victorian Iraq',
+        ]}
+      />
       <Link
         to="/products"
         className="inline-flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-[0.2em] text-victorian-700 hover:text-burgundy-700 dark:text-cream-200 dark:hover:text-victorian-300"
@@ -85,9 +135,10 @@ export function CategoryPage() {
         {category.image ? (
           <img
             src={category.image}
-            alt=""
+            alt={title}
             className="absolute inset-0 h-full w-full object-cover object-center"
             loading="eager"
+            decoding="async"
           />
         ) : (
           <div

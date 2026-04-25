@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fetchCategories, fetchProducts } from '../api'
 import { CategoryCircles } from '../components/CategoryCircles'
 import { ProductCard } from '../components/ProductCard'
 import { ProductGridShimmer } from '../components/Shimmer'
+import { SEO } from '../components/SEO'
 import { useLanguage } from '../context/LanguageContext'
+import { breadcrumbLD, buildCanonical, itemListLD } from '../lib/seo'
 import type { Category, Product } from '../types'
 
 export function Products() {
@@ -39,8 +41,37 @@ export function Products() {
     }
   }, [])
 
+  const url = buildCanonical('/products')
+  const seoLD = useMemo(() => {
+    const list = itemListLD({
+      name: isAr ? 'كل المنتجات' : 'All Products',
+      url,
+      items: products.slice(0, 30).map((p) => ({
+        slug: p.slug,
+        name: isAr ? p.nameAr : p.name,
+        image: p.images?.[0],
+        price: p.price,
+      })),
+    })
+    const crumbs = breadcrumbLD([
+      { name: isAr ? 'الرئيسية' : 'Home', url: buildCanonical('/') },
+      { name: isAr ? 'المنتجات' : 'Products', url },
+    ])
+    return [list, crumbs]
+  }, [isAr, products, url])
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
+      <SEO
+        title={isAr ? 'كل المنتجات — تشكيلة فيكتوريان' : 'All Products — Victorian Collection'}
+        description={
+          isAr
+            ? 'تصفّح كل المنتجات في متجر فيكتوريان: دفاتر فيكتورية، أقلام ريش، ساعات جيب، ظروف وهدايا كلاسيكية بالدينار العراقي وتوصيل لكل المحافظات.'
+            : 'Browse the full Victorian Iraq collection: notebooks, quill pens, pocket watches, envelopes & gifts — IQD prices and delivery across Iraq.'
+        }
+        lang={isAr ? 'ar' : 'en'}
+        jsonLd={seoLD}
+      />
       <h1 className="text-center font-display text-3xl font-bold uppercase tracking-[0.2em] text-victorian-900 dark:text-cream-50">
         {t('navShop')}
       </h1>
