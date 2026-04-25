@@ -48,19 +48,53 @@ model Product {
 }
 
 model Order {
-  id           String      @id @default(cuid())
-  createdAt    DateTime    @default(now())
-  customerName String
-  email        String      @default("")
-  phone        String
-  address      String
-  city         String
-  province     String      @default("")
-  landmark     String      @default("")
-  notes        String?
-  total        Decimal     @db.Decimal(10, 2)
-  status       String      @default("pending")
-  items        OrderItem[]
+  id             String      @id @default(cuid())
+  createdAt      DateTime    @default(now())
+  customerName   String
+  email          String      @default("")
+  phone          String
+  address        String
+  city           String
+  province       String      @default("")
+  landmark       String      @default("")
+  notes          String?
+  total          Decimal     @db.Decimal(10, 2)
+  status         String      @default("pending")
+  // كود الخصم المُطبَّق (لقطة)
+  discountId     String?
+  discount       Discount?   @relation(fields: [discountId], references: [id], onDelete: SetNull)
+  discountCode   String?
+  discountAmount Decimal     @default(0) @db.Decimal(10, 2)
+  items          OrderItem[]
+}
+
+// أكواد الخصم — يُنشئها المشرف، تُطبَّق عند الدفع وتعدّل المجموع.
+model Discount {
+  id            String    @id @default(cuid())
+  /// الكود الذي يدخله الزبون (مخزَّن بالأحرف الكبيرة، فريد)
+  code          String    @unique
+  /// اسم وصفي للمشرف (عربي)
+  nameAr        String
+  /// اسم وصفي بالإنجليزية (اختياري)
+  nameEn        String    @default("")
+  /// نوع الخصم: percent (نسبة٪) أو fixed (مبلغ ثابت بالدينار)
+  type          String    @default("percent")
+  /// قيمة الخصم: للنسبة 1..100، للمبلغ الثابت بالدينار العراقي
+  value         Decimal   @db.Decimal(10, 2)
+  /// الحد الأدنى لمجموع المنتجات قبل التوصيل ليُقبل الكود
+  minOrderTotal Decimal?  @db.Decimal(10, 2)
+  /// السقف الأقصى لمبلغ الخصم (يُستخدم مع نوع percent)
+  maxDiscount   Decimal?  @db.Decimal(10, 2)
+  /// مفعَّل / معطَّل
+  enabled       Boolean   @default(true)
+  /// الحد الأقصى لعدد مرات الاستخدام (null = غير محدود)
+  usageLimit    Int?
+  /// عدد الاستخدامات الحالية
+  usageCount    Int       @default(0)
+  /// تاريخ الانتهاء (null = بدون)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  orders        Order[]
 }
 
 model OrderItem {

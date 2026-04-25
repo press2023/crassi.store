@@ -13,6 +13,7 @@ import settingsRoutes from './routes/settings.js'
 import visitorsRoutes from './routes/visitors.js'
 import reviewsRoutes from './routes/reviews.js'
 import pushRoutes from './routes/push.js'
+import discountsRoutes, { evaluateDiscount } from './routes/discounts.js'
 import { sendPushToAll } from './lib/push.js'
 import { DELIVERY_FEE_IQD } from '../src/lib/deliveryFee.ts'
 
@@ -98,6 +99,7 @@ app.use('/api/settings', settingsRoutes)
 app.use('/api/visitors', visitorsRoutes)
 app.use('/api/reviews', reviewsRoutes)
 app.use('/api/admin/push', pushRoutes)
+app.use('/api/discounts', discountsRoutes)
 
 function serializeProduct(p: {
   price: { toString(): string }
@@ -184,6 +186,7 @@ app.post('/api/orders', async (req, res) => {
     province?: string
     landmark?: string
     notes?: string
+    discountCode?: string | null
     items?: { productId: string; quantity: number; size: string; unitPrice: string; productName: string }[]
   }
   const items = body.items
@@ -196,13 +199,17 @@ app.post('/api/orders', async (req, res) => {
   const province = String(body.province ?? '').trim()
   const landmark = String(body.landmark ?? '').trim()
   const notes = body.notes ? String(body.notes).trim() : null
+  const discountCodeRaw = String(body.discountCode ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '')
   if (!customerName || !phone || !address || !province) {
     return res.status(400).json({ error: 'missing_fields' })
   }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      let total = new Prisma.Decimal(0)
+      let subtotal = new Prisma.Decimal(0)
       const lineData: {
         productId: string
         quantity: number
@@ -220,7 +227,7 @@ app.post('/api/orders', async (req, res) => {
         const sale = product.salePrice
         const useSale = sale != null && Number(sale) > 0 && Number(sale) < Number(product.price)
         const unitPrice = useSale ? sale : product.price
-        total = total.add(unitPrice.mul(qty))
+        subtotal = subtotal.add(unitPrice.mul(qty))
         lineData.push({
           productId: product.id,
           quantity: qty,
@@ -230,7 +237,25 @@ app.post('/api/orders', async (req, res) => {
         })
       }
 
-      total = total.add(new Prisma.Decimal(DELIVERY_FEE_IQD))
+      // كود الخصم — يُحسب على مجموع المنتجات قبل التوصيل
+      let discountAmount = new Prisma.Decimal(0)
+      let discountId: string | null = null
+      let discountCode: string | null = null
+      if (discountCodeRaw) {
+        const d = await tx.discount.findUnique({ where: { code: discountCodeRaw } })
+        if (!d) throw new Error('discount_not_found')
+        const evalResult = evaluateDiscount(d, Number(subtotal))
+        if (!evalResult.ok) throw new Error(`discount_${evalResult.error}`)
+        discountAmount = new Prisma.Decimal(evalResult.amount)
+        discountId = d.id
+        discountCode = d.code
+        await tx.discount.update({
+          where: { id: d.id },
+          data: { usageCount: { increment: 1 } },
+        })
+      }
+
+      const total = subtotal.sub(discountAmount).add(new Prisma.Decimal(DELIVERY_FEE_IQD))
 
       const order = await tx.order.create({
         data: {
@@ -244,6 +269,9 @@ app.post('/api/orders', async (req, res) => {
           notes,
           total,
           status: 'pending',
+          discountId,
+          discountCode,
+          discountAmount,
           items: {
             create: lineData.map((l) => ({
               productId: l.productId,
@@ -279,6 +307,8 @@ app.post('/api/orders', async (req, res) => {
     const msg = e instanceof Error ? e.message : ''
     if (msg === 'product_not_found') return res.status(400).json({ error: 'product_not_found' })
     if (msg === 'insufficient_stock') return res.status(400).json({ error: 'insufficient_stock' })
+    if (msg === 'discount_not_found') return res.status(400).json({ error: 'discount_not_found' })
+    if (msg.startsWith('discount_')) return res.status(400).json({ error: msg })
     console.error(e)
     res.status(503).json({ error: 'order_failed' })
   }
@@ -306,6 +336,8 @@ app.get('/api/orders/:id', async (req, res) => {
       landmark: order.landmark,
       total: order.total.toString(),
       status: order.status,
+      discountCode: order.discountCode ?? null,
+      discountAmount: order.discountAmount.toString(),
       items: order.items.map((i) => ({
         id: i.id,
         productName: i.productName,

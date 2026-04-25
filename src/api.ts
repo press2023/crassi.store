@@ -153,6 +153,8 @@ export async function createOrder(payload: {
   address: string
   landmark?: string
   notes?: string
+  /** كود الخصم المُطبَّق على الطلب (اختياري) */
+  discountCode?: string | null
   items: {
     productId: string
     quantity: number
@@ -167,4 +169,36 @@ export async function createOrder(payload: {
     body: JSON.stringify(payload),
   })
   return parseJson<{ id: string }>(res)
+}
+
+// ── أكواد الخصم ─────────────────────────────────────
+
+/** نتيجة التحقق العامة من كود الخصم — تُستخدم في السلة والدفع */
+export type DiscountValidation = {
+  code: string
+  nameAr: string
+  nameEn: string
+  type: 'percent' | 'fixed'
+  value: string
+  /** مبلغ الخصم النهائي بالدينار محسوبًا للمجموع المرسل */
+  amount: number
+  minOrderTotal: string | null
+  maxDiscount: string | null
+}
+
+/**
+ * يتحقق من صلاحية كود الخصم لمجموع المنتجات الحالي.
+ * في حالة الخطأ يرمي Error برسالة الخادم (not_found, disabled, expired, exhausted, min_total, invalid).
+ */
+export async function validateDiscount(code: string, subtotal: number): Promise<DiscountValidation> {
+  const res = await fetch(`${base}/api/discounts/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, subtotal }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({})) as { error?: string }
+    throw new Error(data.error || res.statusText || 'invalid')
+  }
+  return res.json() as Promise<DiscountValidation>
 }

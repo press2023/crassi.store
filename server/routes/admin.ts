@@ -277,6 +277,7 @@ router.get('/orders', requirePermission('orders'), async (_req, res) => {
     const serialized = rows.map((o) => ({
       ...o,
       total: o.total.toString(),
+      discountAmount: o.discountAmount.toString(),
       items: o.items.map((i) => ({
         ...i,
         unitPrice: i.unitPrice.toString(),
@@ -305,6 +306,7 @@ router.get('/orders/:id', requirePermission('orders'), async (req, res) => {
     res.json({
       ...o,
       total: o.total.toString(),
+      discountAmount: o.discountAmount.toString(),
       items: o.items.map((i) => ({
         ...i,
         unitPrice: i.unitPrice.toString(),

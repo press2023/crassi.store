@@ -17,8 +17,11 @@ import {
   Percent,
   Phone,
   Plus,
+  Power,
+  PowerOff,
   Square,
   Tag,
+  Ticket,
   Trash2,
   Users,
   Shield,
@@ -46,7 +49,7 @@ import type { Category, Product } from '../types'
 
 const base = import.meta.env.VITE_API_BASE ?? ''
 
-type Tab = 'categories' | 'products' | 'sale' | 'orders' | 'site' | 'reviews' | 'admins'
+type Tab = 'categories' | 'products' | 'sale' | 'orders' | 'site' | 'reviews' | 'admins' | 'discounts'
 
 type OrderItem = {
   id: string
@@ -88,6 +91,7 @@ export function Admin() {
     if (permissions.includes('categories')) return 'categories'
     if (permissions.includes('site_settings')) return 'site'
     if (permissions.includes('reviews')) return 'reviews'
+    if (permissions.includes('discounts')) return 'discounts'
     return 'orders'
   })
   const [categories, setCategories] = useState<Category[]>([])
@@ -148,6 +152,7 @@ export function Admin() {
         {(isSuperAdmin || permissions.includes('orders')) && tabBtn('orders', <ClipboardList className="h-4 w-4" />, isAr ? 'الطلبات' : 'Orders')}
         {(isSuperAdmin || permissions.includes('products')) && tabBtn('products', <Package className="h-4 w-4" />, isAr ? 'المنتجات' : 'Products')}
         {(isSuperAdmin || permissions.includes('products')) && tabBtn('sale', <Percent className="h-4 w-4" />, isAr ? 'التخفيضات' : 'Sale')}
+        {(isSuperAdmin || permissions.includes('discounts')) && tabBtn('discounts', <Ticket className="h-4 w-4" />, isAr ? 'أكواد الخصم' : 'Discount Codes')}
         {(isSuperAdmin || permissions.includes('categories')) && tabBtn('categories', <Tag className="h-4 w-4" />, isAr ? 'التصنيفات' : 'Categories')}
         {(isSuperAdmin || permissions.includes('site_settings')) && tabBtn('site', <ImageIcon className="h-4 w-4" />, isAr ? 'إعدادات الموقع' : 'Site')}
         {(isSuperAdmin || permissions.includes('reviews')) && tabBtn('reviews', <MessageCircle className="h-4 w-4" />, isAr ? 'التعليقات' : 'Reviews')}
@@ -157,6 +162,7 @@ export function Admin() {
       {(isSuperAdmin || permissions.includes('categories')) && tab === 'categories' && <CategoriesTab token={token!} categories={categories} isAr={isAr} reload={load} />}
       {(isSuperAdmin || permissions.includes('products')) && tab === 'products' && <ProductsTab token={token!} products={products} categories={categories} isAr={isAr} reload={load} />}
       {(isSuperAdmin || permissions.includes('products')) && tab === 'sale' && <SaleTab products={products} isAr={isAr} />}
+      {(isSuperAdmin || permissions.includes('discounts')) && tab === 'discounts' && <DiscountsTab token={token!} isAr={isAr} />}
       {(isSuperAdmin || permissions.includes('orders')) && tab === 'orders' && <OrdersTab token={token!} orders={orders} isAr={isAr} reload={load} />}
       {(isSuperAdmin || permissions.includes('site_settings')) && tab === 'site' && <SiteTab token={token!} isAr={isAr} />}
       {(isSuperAdmin || permissions.includes('reviews')) && tab === 'reviews' && <ReviewsTab token={token!} isAr={isAr} />}
@@ -1433,6 +1439,464 @@ function OrdersTab({ token, orders, isAr }: { token: string; orders: Order[]; is
   )
 }
 
+/* ─── Discount codes (admin) ─────────────────────────── */
+
+type AdminDiscount = {
+  id: string
+  code: string
+  nameAr: string
+  nameEn: string
+  type: 'percent' | 'fixed'
+  value: string
+  minOrderTotal: string | null
+  maxDiscount: string | null
+  enabled: boolean
+  usageLimit: number | null
+  usageCount: number
+  expiresAt: string | null
+  createdAt: string
+}
+
+function emptyDiscountForm() {
+  return {
+    code: '',
+    nameAr: '',
+    nameEn: '',
+    type: 'percent' as 'percent' | 'fixed',
+    value: '',
+    minOrderTotal: '',
+    maxDiscount: '',
+    enabled: true,
+    usageLimit: '',
+    expiresAt: '',
+  }
+}
+
+function DiscountsTab({ token, isAr }: { token: string; isAr: boolean }) {
+  const [rows, setRows] = useState<AdminDiscount[]>([])
+  const [loading, setLoading] = useState(true)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<AdminDiscount | null>(null)
+  const [form, setForm] = useState(emptyDiscountForm())
+  const [busy, setBusy] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await api('/api/discounts/admin', token)
+      if (res.ok) {
+        const data = (await res.json()) as AdminDiscount[]
+        setRows(Array.isArray(data) ? data : [])
+      } else {
+        setRows([])
+      }
+    } catch {
+      setRows([])
+    }
+    setLoading(false)
+  }, [token])
+
+  useEffect(() => { load() }, [load])
+
+  const openCreate = () => {
+    setEditing(null)
+    setForm(emptyDiscountForm())
+    setFormOpen(true)
+  }
+
+  const openEdit = (d: AdminDiscount) => {
+    setEditing(d)
+    setForm({
+      code: d.code,
+      nameAr: d.nameAr,
+      nameEn: d.nameEn,
+      type: d.type,
+      value: d.value,
+      minOrderTotal: d.minOrderTotal ?? '',
+      maxDiscount: d.maxDiscount ?? '',
+      enabled: d.enabled,
+      usageLimit: d.usageLimit != null ? String(d.usageLimit) : '',
+      expiresAt: d.expiresAt ? d.expiresAt.slice(0, 10) : '',
+    })
+    setFormOpen(true)
+  }
+
+  const closeForm = () => {
+    setFormOpen(false)
+    setEditing(null)
+    setForm(emptyDiscountForm())
+  }
+
+  const errorMessage = (code: string) => {
+    switch (code) {
+      case 'code_exists': return isAr ? 'هذا الكود موجود مسبقًا.' : 'Code already exists.'
+      case 'missing_code': return isAr ? 'أدخل الكود.' : 'Enter a code.'
+      case 'missing_name': return isAr ? 'أدخل اسمًا للخصم.' : 'Enter a name.'
+      case 'invalid_type': return isAr ? 'نوع غير صالح.' : 'Invalid type.'
+      case 'invalid_value': return isAr ? 'قيمة الخصم غير صالحة.' : 'Invalid value.'
+      case 'percent_out_of_range': return isAr ? 'النسبة يجب أن تكون 1 إلى 100.' : 'Percent must be 1-100.'
+      default: return isAr ? 'تعذر الحفظ.' : 'Could not save.'
+    }
+  }
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setBusy(true)
+    const payload = {
+      code: form.code.trim().toUpperCase().replace(/\s+/g, ''),
+      nameAr: form.nameAr.trim(),
+      nameEn: form.nameEn.trim(),
+      type: form.type,
+      value: Number(form.value),
+      minOrderTotal: form.minOrderTotal === '' ? null : Number(form.minOrderTotal),
+      maxDiscount: form.maxDiscount === '' ? null : Number(form.maxDiscount),
+      enabled: form.enabled,
+      usageLimit: form.usageLimit === '' ? null : Math.max(0, Math.floor(Number(form.usageLimit))),
+      expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+    }
+    try {
+      const url = editing ? `/api/discounts/admin/${editing.id}` : '/api/discounts/admin'
+      const res = await api(url, token, {
+        method: editing ? 'PUT' : 'POST',
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        closeForm()
+        await load()
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string }
+        alert(errorMessage(String(data.error ?? '')))
+      }
+    } catch {
+      alert(isAr ? 'خطأ في الشبكة' : 'Network error')
+    }
+    setBusy(false)
+  }
+
+  const toggleEnabled = async (d: AdminDiscount) => {
+    setBusyId(d.id)
+    try {
+      const res = await api(`/api/discounts/admin/${d.id}/toggle`, token, { method: 'POST' })
+      if (res.ok) {
+        const updated = (await res.json()) as AdminDiscount
+        setRows((prev) => prev.map((r) => (r.id === d.id ? updated : r)))
+      } else {
+        alert(isAr ? 'تعذر التحديث' : 'Update failed')
+      }
+    } catch {
+      alert(isAr ? 'خطأ في الشبكة' : 'Network error')
+    }
+    setBusyId(null)
+  }
+
+  const del = async (d: AdminDiscount) => {
+    if (!confirm(isAr ? `حذف الكود ${d.code} نهائيًا؟` : `Delete ${d.code}?`)) return
+    setBusyId(d.id)
+    try {
+      const res = await api(`/api/discounts/admin/${d.id}`, token, { method: 'DELETE' })
+      if (res.ok) await load()
+      else alert(isAr ? 'تعذر الحذف' : 'Delete failed')
+    } catch {
+      alert(isAr ? 'خطأ في الشبكة' : 'Network error')
+    }
+    setBusyId(null)
+  }
+
+  if (loading) {
+    return <div className="py-8 text-center text-sm text-victorian-500">{isAr ? 'جاري التحميل...' : 'Loading...'}</div>
+  }
+
+  const inp = 'mt-1 w-full border border-victorian-300 bg-cream-50 px-4 py-2 text-sm dark:border-victorian-700 dark:bg-victorian-950 dark:text-cream-100'
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-display font-bold text-victorian-900 dark:text-cream-50">
+          {isAr ? 'أكواد الخصم' : 'Discount Codes'}
+        </h2>
+        <button
+          type="button"
+          onClick={openCreate}
+          className="inline-flex items-center gap-2 border-2 border-burgundy-700 bg-burgundy-700 px-5 py-2 font-display text-xs font-semibold uppercase tracking-[0.2em] text-cream-50 hover:bg-burgundy-800"
+        >
+          <Plus className="h-4 w-4" />
+          {isAr ? 'كود جديد' : 'New code'}
+        </button>
+      </div>
+
+      <div className="border border-victorian-200 bg-cream-50 dark:border-victorian-800 dark:bg-victorian-950/60">
+        {rows.length === 0 ? (
+          <p className="py-12 text-center text-sm text-victorian-400">
+            {isAr ? 'لا توجد أكواد خصم. أنشئ كودًا جديدًا.' : 'No discount codes yet. Create your first one.'}
+          </p>
+        ) : (
+          <ul className="divide-y divide-victorian-200 dark:divide-victorian-800">
+            {rows.map((d) => {
+              const isExpired = d.expiresAt && new Date(d.expiresAt).getTime() < Date.now()
+              const isExhausted = d.usageLimit != null && d.usageCount >= d.usageLimit
+              return (
+                <li key={d.id} className="flex flex-wrap items-start justify-between gap-4 p-4">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-base font-bold tracking-wider text-victorian-900 dark:text-cream-50" dir="ltr">
+                        {d.code}
+                      </span>
+                      {!d.enabled && (
+                        <span className="rounded bg-victorian-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-victorian-800 dark:bg-victorian-800 dark:text-victorian-200">
+                          {isAr ? 'معطَّل' : 'Disabled'}
+                        </span>
+                      )}
+                      {d.enabled && !isExpired && !isExhausted && (
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                          {isAr ? 'فعّال' : 'Active'}
+                        </span>
+                      )}
+                      {isExpired && (
+                        <span className="rounded bg-burgundy-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-burgundy-800 dark:bg-burgundy-900/40 dark:text-burgundy-300">
+                          {isAr ? 'منتهي' : 'Expired'}
+                        </span>
+                      )}
+                      {isExhausted && !isExpired && (
+                        <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                          {isAr ? 'مستنفد' : 'Used up'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-victorian-700 dark:text-cream-200">
+                      {isAr ? d.nameAr : (d.nameEn || d.nameAr)}
+                    </p>
+                    <p className="text-xs text-victorian-500">
+                      <span className="font-bold">
+                        {d.type === 'percent'
+                          ? `${formatNumberEn(Number(d.value))}%`
+                          : `${formatNumberEn(Number(d.value))} IQD`}
+                      </span>
+                      {d.minOrderTotal && (
+                        <> · {isAr ? 'حد أدنى' : 'Min'}: {formatNumberEn(Number(d.minOrderTotal))} IQD</>
+                      )}
+                      {d.type === 'percent' && d.maxDiscount && (
+                        <> · {isAr ? 'سقف' : 'Cap'}: {formatNumberEn(Number(d.maxDiscount))} IQD</>
+                      )}
+                    </p>
+                    <p className="text-[10px] text-victorian-400">
+                      {isAr ? 'الاستخدام' : 'Used'}: {formatNumberEn(d.usageCount)}
+                      {d.usageLimit != null ? ` / ${formatNumberEn(d.usageLimit)}` : ''}
+                      {d.expiresAt && (
+                        <> · {isAr ? 'ينتهي' : 'Expires'}: {formatDateNumeric(new Date(d.expiresAt))}</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={busyId === d.id}
+                      onClick={() => toggleEnabled(d)}
+                      title={d.enabled ? (isAr ? 'تعطيل' : 'Disable') : (isAr ? 'تفعيل' : 'Enable')}
+                      className={`inline-flex items-center gap-1 border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider disabled:opacity-50 ${
+                        d.enabled
+                          ? 'border-victorian-300 text-victorian-700 hover:bg-victorian-100 dark:border-victorian-600 dark:text-cream-200 dark:hover:bg-victorian-900'
+                          : 'border-emerald-400 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-950/40'
+                      }`}
+                    >
+                      {d.enabled ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+                      {d.enabled ? (isAr ? 'تعطيل' : 'Disable') : (isAr ? 'تفعيل' : 'Enable')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openEdit(d)}
+                      className="p-2 border border-victorian-300 text-victorian-600 hover:bg-victorian-100 dark:border-victorian-700 dark:hover:bg-victorian-900"
+                      aria-label={isAr ? 'تعديل' : 'Edit'}
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === d.id}
+                      onClick={() => del(d)}
+                      className="p-2 border border-burgundy-300 text-burgundy-600 hover:bg-burgundy-50 disabled:opacity-50 dark:border-burgundy-800 dark:hover:bg-burgundy-900/30"
+                      aria-label={isAr ? 'حذف' : 'Delete'}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
+
+      {formOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+          <form onSubmit={save} className="my-8 w-full max-w-lg border border-victorian-200 bg-cream-50 p-6 shadow-xl dark:border-victorian-800 dark:bg-victorian-950">
+            <div className="mb-4 flex items-center justify-between border-b border-victorian-200 pb-3 dark:border-victorian-800">
+              <h3 className="text-lg font-bold text-victorian-900 dark:text-cream-50">
+                {editing
+                  ? (isAr ? 'تعديل كود الخصم' : 'Edit Discount Code')
+                  : (isAr ? 'كود خصم جديد' : 'New Discount Code')}
+              </h3>
+              <button type="button" onClick={closeForm} className="text-victorian-500 hover:text-burgundy-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className="text-xs text-victorian-500">{isAr ? 'الكود (يحوّل لأحرف كبيرة)' : 'Code (uppercased)'}</span>
+                <input
+                  required
+                  dir="ltr"
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s+/g, '') })}
+                  placeholder="WELCOME10"
+                  className={inp + ' uppercase'}
+                />
+              </label>
+
+              <label className="block sm:col-span-2">
+                <span className="text-xs text-victorian-500">{isAr ? 'اسم الخصم (عربي)' : 'Name (Arabic)'}</span>
+                <input
+                  required
+                  value={form.nameAr}
+                  onChange={(e) => setForm({ ...form, nameAr: e.target.value })}
+                  placeholder={isAr ? 'خصم العيد' : 'Eid offer'}
+                  className={inp}
+                />
+              </label>
+
+              <label className="block sm:col-span-2">
+                <span className="text-xs text-victorian-500">{isAr ? 'اسم بالإنجليزية (اختياري)' : 'Name (English, optional)'}</span>
+                <input
+                  value={form.nameEn}
+                  onChange={(e) => setForm({ ...form, nameEn: e.target.value })}
+                  placeholder="Eid Offer"
+                  className={inp}
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs text-victorian-500">{isAr ? 'النوع' : 'Type'}</span>
+                <select
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value as 'percent' | 'fixed' })}
+                  className={inp + ' appearance-none'}
+                >
+                  <option value="percent">{isAr ? 'نسبة مئوية ٪' : 'Percent (%)'}</option>
+                  <option value="fixed">{isAr ? 'مبلغ ثابت (د.ع)' : 'Fixed amount (IQD)'}</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-xs text-victorian-500">
+                  {form.type === 'percent'
+                    ? (isAr ? 'النسبة (1-100)' : 'Percent (1-100)')
+                    : (isAr ? 'المبلغ بالدينار' : 'Amount (IQD)')}
+                </span>
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  step={form.type === 'percent' ? 1 : 100}
+                  max={form.type === 'percent' ? 100 : undefined}
+                  value={form.value}
+                  onChange={(e) => setForm({ ...form, value: e.target.value })}
+                  className={inp}
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs text-victorian-500">
+                  {isAr ? 'حد أدنى للمجموع (اختياري)' : 'Min order total (optional)'}
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step={500}
+                  value={form.minOrderTotal}
+                  onChange={(e) => setForm({ ...form, minOrderTotal: e.target.value })}
+                  placeholder="0"
+                  className={inp}
+                />
+              </label>
+
+              {form.type === 'percent' && (
+                <label className="block">
+                  <span className="text-xs text-victorian-500">
+                    {isAr ? 'سقف مبلغ الخصم (اختياري)' : 'Max discount cap (optional)'}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={500}
+                    value={form.maxDiscount}
+                    onChange={(e) => setForm({ ...form, maxDiscount: e.target.value })}
+                    className={inp}
+                  />
+                </label>
+              )}
+
+              <label className="block">
+                <span className="text-xs text-victorian-500">
+                  {isAr ? 'حد أقصى للاستخدام (اختياري)' : 'Usage limit (optional)'}
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.usageLimit}
+                  onChange={(e) => setForm({ ...form, usageLimit: e.target.value })}
+                  placeholder={isAr ? 'بدون حد' : 'Unlimited'}
+                  className={inp}
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs text-victorian-500">{isAr ? 'تاريخ الانتهاء (اختياري)' : 'Expires at (optional)'}</span>
+                <input
+                  type="date"
+                  value={form.expiresAt}
+                  onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
+                  className={inp}
+                />
+              </label>
+
+              <label className="flex items-center gap-3 sm:col-span-2 cursor-pointer p-3 border border-victorian-200 dark:border-victorian-800">
+                <input
+                  type="checkbox"
+                  checked={form.enabled}
+                  onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
+                  className="h-4 w-4 rounded border-victorian-300 text-burgundy-700 focus:ring-burgundy-700"
+                />
+                <span className="text-sm text-victorian-700 dark:text-cream-200">
+                  {isAr ? 'مفعَّل (يمكن للزبائن استخدامه الآن)' : 'Enabled (customers can use it now)'}
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3 border-t border-victorian-200 pt-4 dark:border-victorian-800">
+              <button
+                type="button"
+                onClick={closeForm}
+                className="px-5 py-2 text-sm border font-bold uppercase tracking-[0.1em] border-victorian-300 text-victorian-700 hover:bg-victorian-100 dark:border-victorian-700 dark:text-cream-200 dark:hover:bg-victorian-900"
+              >
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="submit"
+                disabled={busy}
+                className="px-5 py-2 text-sm border-2 font-bold uppercase tracking-[0.1em] border-burgundy-700 bg-burgundy-700 text-cream-50 hover:bg-burgundy-800 disabled:opacity-50"
+              >
+                {busy ? '...' : (isAr ? 'حفظ الكود' : 'Save')}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── Reviews (moderation) ───────────────────────────── */
 
 type AdminReviewRow = {
@@ -1596,6 +2060,7 @@ function AdminsTab({ token, isAr }: { token: string; isAr: boolean }) {
     { id: 'orders', labelAr: 'الطلبات', labelEn: 'Orders' },
     { id: 'products', labelAr: 'المنتجات', labelEn: 'Products' },
     { id: 'categories', labelAr: 'التصنيفات', labelEn: 'Categories' },
+    { id: 'discounts', labelAr: 'أكواد الخصم', labelEn: 'Discount codes' },
     { id: 'site_settings', labelAr: 'إعدادات الموقع', labelEn: 'Site Settings' },
     { id: 'reviews', labelAr: 'التعليقات والتقييمات', labelEn: 'Reviews & ratings' },
   ]

@@ -28,6 +28,8 @@ type OrderData = {
   address: string
   total: string
   status: string
+  discountCode?: string | null
+  discountAmount?: string | null
   items: OrderItem[]
 }
 
@@ -196,7 +198,18 @@ export function TrackOrder() {
                       ))}
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
+                    {order.discountCode && Number(order.discountAmount ?? 0) > 0 && (
+                      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
+                        <span className="text-xs text-emerald-700 dark:text-emerald-400">
+                          {isAr ? `كود (${order.discountCode})` : `Code (${order.discountCode})`}
+                        </span>
+                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                          − {formatNumberEn(Number(order.discountAmount))} IQD
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
                       <span className="text-xs text-slate-400">{isAr ? 'المجموع' : 'Total'}</span>
                       <span className="font-bold text-slate-900 dark:text-white">{formatNumberEn(Number(order.total))} IQD</span>
                     </div>

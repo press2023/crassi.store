@@ -42,6 +42,8 @@ type Order = {
   notes: string | null
   total: string
   status: string
+  discountCode?: string | null
+  discountAmount?: string | null
   items: OrderItem[]
 }
 
@@ -339,6 +341,17 @@ export function AdminOrder() {
                 )
               })}
             </ul>
+
+            {order.discountCode && Number(order.discountAmount ?? 0) > 0 && (
+              <div className="mt-4 flex items-center justify-between border-t border-victorian-200 pt-3 dark:border-victorian-800">
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                  {isAr ? `كود الخصم (${order.discountCode})` : `Discount code (${order.discountCode})`}
+                </span>
+                <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                  − {formatNumberEn(Number(order.discountAmount))} {CURRENCY}
+                </span>
+              </div>
+            )}
 
             <div className="mt-4 flex items-center justify-between border-t-2 border-victorian-300 pt-4 dark:border-victorian-700">
               <span className="font-display text-sm uppercase tracking-wider text-victorian-700 dark:text-cream-200">

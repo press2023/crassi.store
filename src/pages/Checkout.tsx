@@ -32,7 +32,7 @@ const inputClass =
 
 export function Checkout() {
   const { t, isAr } = useLanguage()
-  const { items, clear } = useCart()
+  const { items, clear, discount } = useCart()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [province, setProvince] = useState('')
@@ -111,6 +111,7 @@ export function Checkout() {
         address,
         landmark,
         notes: notes || undefined,
+        discountCode: discount?.code ?? undefined,
         items: items.map((x) => ({
           productId: x.productId,
           quantity: x.quantity,
@@ -122,8 +123,13 @@ export function Checkout() {
       saveOrderId(id)
       setDoneId(id)
       clear()
-    } catch {
-      setError(isAr ? 'تعذر إرسال الطلب. تحقق من الخادم.' : 'Could not place order.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      if (msg.includes('discount_')) {
+        setError(isAr ? 'كود الخصم لم يعد ساريًا. أزله من السلة وحاول مرة أخرى.' : 'Discount code is no longer valid. Remove it from the cart and retry.')
+      } else {
+        setError(isAr ? 'تعذر إرسال الطلب. تحقق من الخادم.' : 'Could not place order.')
+      }
     } finally {
       setLoading(false)
     }
