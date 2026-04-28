@@ -119,6 +119,7 @@ app.use('/api/visitors', visitorsRoutes)
 app.use('/api/reviews', reviewsRoutes)
 app.use('/api/admin/push', pushRoutes)
 app.use('/api/discounts', discountsRoutes)
+app.use('/api/security', securityRoutes)
 
 function serializeProduct(p: {
   price: { toString(): string }

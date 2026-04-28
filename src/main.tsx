@@ -15,19 +15,22 @@ import { CartProvider } from './context/CartContext'
 import { LanguageProvider } from './context/LanguageContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { VisitorProvider } from './context/VisitorContext'
+import { SiteGate } from './components/SiteGate'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <ThemeProvider>
         <LanguageProvider>
-          <AuthProvider>
-            <CartProvider>
-              <VisitorProvider>
-                <App />
-              </VisitorProvider>
-            </CartProvider>
-          </AuthProvider>
+          <SiteGate>
+            <AuthProvider>
+              <CartProvider>
+                <VisitorProvider>
+                  <App />
+                </VisitorProvider>
+              </CartProvider>
+            </AuthProvider>
+          </SiteGate>
         </LanguageProvider>
       </ThemeProvider>
     </BrowserRouter>
