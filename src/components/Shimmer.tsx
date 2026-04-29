@@ -138,6 +138,98 @@ export function ProductGridShimmer({ count = 4 }: { count?: number }) {
   )
 }
 
+/** بطاقة منتج أنيقة بشريط لمعان فيكتوري — أوضح من pulse العادي */
+export function VictorianProductCardShimmer() {
+  return (
+    <div className="flex flex-col">
+      <VictorianShimmerBlock className="aspect-[3/4] w-full rounded-2xl" />
+      <div className="mt-3 space-y-2">
+        <VictorianShimmerBlock className="h-3.5 w-3/4 rounded" />
+        <VictorianShimmerBlock className="h-3 w-1/3 rounded" />
+      </div>
+    </div>
+  )
+}
+
+/** هيكل تحميل متقدم لصفحة البحث: ترويسة عدّ + شبكة منتجات بشريط لمعان */
+export function SearchResultsShimmer({ count = 8 }: { count?: number }) {
+  return (
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <VictorianShimmerBlock className="h-6 w-6 rounded-full" />
+          <VictorianShimmerBlock className="h-3 w-16 rounded" />
+        </div>
+        <VictorianShimmerBlock className="h-3 w-20 rounded" />
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:grid-cols-4">
+        {Array.from({ length: count }).map((_, i) => (
+          <VictorianProductCardShimmer key={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** هيكل بانر صورة البحث */
+export function SearchBannerShimmer() {
+  return (
+    <div className="relative">
+      <VictorianShimmerBlock className="block h-52 w-full sm:h-72" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-cream-50 via-cream-50/80 to-transparent dark:from-victorian-950 dark:via-victorian-950/80" />
+    </div>
+  )
+}
+
+/** هيكل نموذج البحث (قسم + إدخال + زر) */
+export function SearchFormShimmer() {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-victorian-200 bg-white p-4 shadow-md dark:border-victorian-800 dark:bg-victorian-950/70 sm:flex-row sm:items-stretch sm:p-3">
+      <VictorianShimmerBlock className="h-10 w-full shrink-0 rounded-xl sm:w-[12rem]" />
+      <VictorianShimmerBlock className="h-10 min-w-0 flex-1 rounded-xl" />
+      <VictorianShimmerBlock className="h-10 w-full shrink-0 rounded-xl sm:w-24" />
+    </div>
+  )
+}
+
+/** هيكل شرائح التصنيفات السريعة */
+export function SearchCategoryChipsShimmer({ count = 6 }: { count?: number }) {
+  const widths = ['w-20', 'w-24', 'w-16', 'w-28', 'w-20', 'w-24', 'w-16', 'w-32']
+  return (
+    <div className="flex flex-wrap gap-2">
+      {Array.from({ length: count }).map((_, i) => (
+        <VictorianShimmerBlock
+          key={i}
+          className={`h-7 ${widths[i % widths.length]} rounded-full`}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** هيكل تحميل كامل لصفحة البحث — يغطي البانر + النموذج + الشرائح + الشبكة */
+export function SearchPageShimmer() {
+  return (
+    <div>
+      <SearchBannerShimmer />
+      <div className="mx-auto max-w-4xl px-4 pb-10 pt-6">
+        <div className="flex justify-end">
+          <VictorianShimmerBlock className="h-7 w-24 rounded-full" />
+        </div>
+        <div className="mt-6">
+          <SearchFormShimmer />
+        </div>
+        <div className="mt-4">
+          <SearchCategoryChipsShimmer />
+        </div>
+        <div className="mt-8">
+          <SearchResultsShimmer count={8} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function ProductDetailShimmer() {
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 lg:grid-cols-2">
