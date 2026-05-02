@@ -5,6 +5,7 @@ import { About } from './pages/About'
 import { Admin } from './pages/Admin'
 import { AdminEditProduct } from './pages/AdminEditProduct'
 import { AdminOrder } from './pages/AdminOrder'
+import { AdminSalesProducts } from './pages/AdminSalesProducts'
 import { Cart } from './pages/Cart'
 import { CategoryPage } from './pages/CategoryPage'
 import { Checkout } from './pages/Checkout'
@@ -18,6 +19,9 @@ import { TrackOrder } from './pages/TrackOrder'
 import { ReviewsPage } from './pages/ReviewsPage'
 import { Sale } from './pages/Sale'
 import { VisitorsPage } from './pages/VisitorsPage'
+import { Privacy } from './pages/Privacy'
+import { Terms } from './pages/Terms'
+import { FAQ } from './pages/FAQ'
 
 export default function App() {
   return (
@@ -34,6 +38,9 @@ export default function App() {
         <Route path="cart" element={<Cart />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="about" element={<About />} />
+        <Route path="privacy" element={<Privacy />} />
+        <Route path="terms" element={<Terms />} />
+        <Route path="faq" element={<FAQ />} />
         <Route path="ratings" element={<Navigate to="/reviews" replace />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="visitors" element={<VisitorsPage />} />
@@ -41,6 +48,7 @@ export default function App() {
         <Route path="order/:id" element={<TrackOrder />} />
         <Route path="login" element={<Login />} />
         <Route path="admin" element={<Admin />} />
+        <Route path="admin/sales/products" element={<AdminSalesProducts />} />
         <Route path="admin/orders/:id" element={<AdminOrder />} />
         <Route path="admin/product/new" element={<AdminEditProduct />} />
         <Route path="admin/product/:id" element={<AdminEditProduct />} />

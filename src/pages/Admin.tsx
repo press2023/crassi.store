@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
+  BarChart3,
   Bell,
   BellOff,
   Calendar,
+  CheckCircle2,
   CheckSquare,
   ClipboardList,
+  Coins,
   Edit3,
   FolderPlus,
   ImagePlus,
@@ -19,9 +22,11 @@ import {
   Plus,
   Power,
   PowerOff,
+  ShoppingBag,
   Square,
   Tag,
   Ticket,
+  TrendingUp,
   Trash2,
   Users,
   Shield,
@@ -49,7 +54,7 @@ import type { Category, Product } from '../types'
 
 const base = import.meta.env.VITE_API_BASE ?? ''
 
-type Tab = 'categories' | 'products' | 'sale' | 'orders' | 'site' | 'reviews' | 'admins' | 'discounts'
+type Tab = 'stats' | 'categories' | 'products' | 'sale' | 'orders' | 'site' | 'reviews' | 'admins' | 'discounts'
 
 type OrderItem = {
   id: string
@@ -86,7 +91,7 @@ export function Admin() {
   const { token, email, isAdmin, isSuperAdmin, permissions, isLoading, logout } = useAuth()
   const { isAr } = useLanguage()
   const [tab, setTab] = useState<Tab>(() => {
-    if (isSuperAdmin || permissions.includes('orders')) return 'orders'
+    if (isSuperAdmin || permissions.includes('orders')) return 'stats'
     if (permissions.includes('products')) return 'products'
     if (permissions.includes('categories')) return 'categories'
     if (permissions.includes('site_settings')) return 'site'
@@ -149,6 +154,7 @@ export function Admin() {
       </div>
 
       <div className="mb-8 flex gap-2 overflow-x-auto pb-1">
+        {(isSuperAdmin || permissions.includes('orders')) && tabBtn('stats', <BarChart3 className="h-4 w-4" />, isAr ? 'المبيعات' : 'Sales')}
         {(isSuperAdmin || permissions.includes('orders')) && tabBtn('orders', <ClipboardList className="h-4 w-4" />, isAr ? 'الطلبات' : 'Orders')}
         {(isSuperAdmin || permissions.includes('products')) && tabBtn('products', <Package className="h-4 w-4" />, isAr ? 'المنتجات' : 'Products')}
         {(isSuperAdmin || permissions.includes('products')) && tabBtn('sale', <Percent className="h-4 w-4" />, isAr ? 'التخفيضات' : 'Sale')}
@@ -159,6 +165,7 @@ export function Admin() {
         {isSuperAdmin && tabBtn('admins', <Users className="h-4 w-4" />, isAr ? 'المشرفون' : 'Admins')}
       </div>
 
+      {(isSuperAdmin || permissions.includes('orders')) && tab === 'stats' && <StatsTab orders={orders} isAr={isAr} />}
       {(isSuperAdmin || permissions.includes('categories')) && tab === 'categories' && <CategoriesTab token={token!} categories={categories} isAr={isAr} reload={load} />}
       {(isSuperAdmin || permissions.includes('products')) && tab === 'products' && <ProductsTab token={token!} products={products} categories={categories} isAr={isAr} reload={load} />}
       {(isSuperAdmin || permissions.includes('products')) && tab === 'sale' && <SaleTab products={products} isAr={isAr} />}
@@ -1043,6 +1050,270 @@ function SaleTab({ products, isAr }: { products: Product[]; isAr: boolean }) {
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ─── Sales Stats ────────────────────────────────────── */
+
+/**
+ * يحسب إحصائيات المبيعات من قائمة الطلبات.
+ * المبيعات تُحسب فقط من الطلبات التي حالتها `delivered` (تم التوصيل) — الإيراد الفعلي المؤكد.
+ * بقية الحالات تُعرض كـعدّادات مساعدة (قيد المعالجة، ملغاة).
+ */
+function StatsTab({ orders, isAr }: { orders: Order[]; isAr: boolean }) {
+  const stats = useMemo(() => {
+    const now = Date.now()
+    const day = 24 * 60 * 60 * 1000
+    const startOfToday = (() => {
+      const d = new Date()
+      d.setHours(0, 0, 0, 0)
+      return d.getTime()
+    })()
+    const start7 = now - 7 * day
+    const start30 = now - 30 * day
+
+    let revenueAll = 0
+    let revenueToday = 0
+    let revenue7 = 0
+    let revenue30 = 0
+    let deliveredCount = 0
+    let pieces = 0
+    const statusCount: Record<string, number> = {
+      pending: 0, confirmed: 0, shipped: 0, delivered: 0, cancelled: 0,
+    }
+    const productMap = new Map<string, { name: string; qty: number; revenue: number }>()
+
+    for (const o of orders) {
+      const s = (o.status || 'pending').toLowerCase()
+      statusCount[s] = (statusCount[s] ?? 0) + 1
+      if (s !== 'delivered') continue
+
+      const total = Number(o.total) || 0
+      const ts = new Date(o.createdAt).getTime()
+      revenueAll += total
+      if (ts >= startOfToday) revenueToday += total
+      if (ts >= start7) revenue7 += total
+      if (ts >= start30) revenue30 += total
+      deliveredCount += 1
+
+      for (const it of o.items) {
+        pieces += it.quantity
+        const key = it.productName
+        const prev = productMap.get(key) ?? { name: key, qty: 0, revenue: 0 }
+        prev.qty += it.quantity
+        prev.revenue += (Number(it.unitPrice) || 0) * it.quantity
+        productMap.set(key, prev)
+      }
+    }
+
+    const inProgress = statusCount.pending + statusCount.confirmed + statusCount.shipped
+    const avgOrder = deliveredCount > 0 ? revenueAll / deliveredCount : 0
+    const topProducts = Array.from(productMap.values())
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5)
+
+    return {
+      revenueAll, revenueToday, revenue7, revenue30,
+      deliveredCount, pieces, avgOrder, inProgress,
+      statusCount, topProducts,
+      totalOrders: orders.length,
+    }
+  }, [orders])
+
+  const fmtIQD = (n: number) =>
+    `${formatNumberEn(Math.round(n))} ${isAr ? 'د.ع' : 'IQD'}`
+
+  const STATUS_LABELS: { key: string; ar: string; en: string; cls: string }[] = [
+    { key: 'pending',   ar: 'قيد الانتظار', en: 'Pending',   cls: 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200' },
+    { key: 'confirmed', ar: 'تم التأكيد',   en: 'Confirmed', cls: 'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200' },
+    { key: 'shipped',   ar: 'تم الشحن',     en: 'Shipped',   cls: 'border-indigo-300 bg-indigo-50 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-200' },
+    { key: 'delivered', ar: 'تم التوصيل',   en: 'Delivered', cls: 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200' },
+    { key: 'cancelled', ar: 'ملغي',         en: 'Cancelled', cls: 'border-burgundy-300 bg-burgundy-50 text-burgundy-800 dark:border-burgundy-800 dark:bg-burgundy-900/20 dark:text-burgundy-200' },
+  ]
+
+  if (orders.length === 0) {
+    return (
+      <div className="border border-dashed border-victorian-300 p-12 text-center text-sm text-victorian-500 dark:border-victorian-700">
+        {isAr ? 'لا توجد طلبات بعد — ستظهر إحصائيات المبيعات هنا تلقائياً عند وصول أول طلب' : 'No orders yet — sales stats will appear here once the first order arrives'}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* بطاقات المؤشرات الرئيسية */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={<Coins className="h-5 w-5" />}
+          label={isAr ? 'إجمالي الإيرادات' : 'Total revenue'}
+          value={fmtIQD(stats.revenueAll)}
+          hint={isAr ? 'من الطلبات الموصلة فقط' : 'Delivered orders only'}
+          tone="emerald"
+        />
+        <StatCard
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          label={isAr ? 'طلبات موصلة' : 'Delivered orders'}
+          value={formatNumberEn(stats.deliveredCount)}
+          hint={isAr ? `من أصل ${formatNumberEn(stats.totalOrders)} طلب` : `Out of ${formatNumberEn(stats.totalOrders)} orders`}
+          tone="indigo"
+        />
+        <StatCard
+          icon={<ShoppingBag className="h-5 w-5" />}
+          label={isAr ? 'قطع مباعة' : 'Pieces sold'}
+          value={formatNumberEn(stats.pieces)}
+          hint={isAr ? 'اضغط لعرض التفاصيل' : 'Click for full breakdown'}
+          tone="amber"
+          to="/admin/sales/products"
+        />
+        <StatCard
+          icon={<TrendingUp className="h-5 w-5" />}
+          label={isAr ? 'متوسط قيمة الطلب' : 'Avg order value'}
+          value={fmtIQD(stats.avgOrder)}
+          hint={isAr ? 'الإيراد ÷ عدد الطلبات الموصلة' : 'Revenue ÷ delivered count'}
+          tone="rose"
+        />
+      </div>
+
+      {/* إيرادات حسب المدة */}
+      <section className="border border-victorian-200 bg-cream-50/60 p-6 dark:border-victorian-800 dark:bg-victorian-950/40">
+        <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.2em] text-victorian-800 dark:text-cream-200">
+          {isAr ? 'الإيراد حسب الفترة' : 'Revenue by period'}
+        </h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <PeriodRow label={isAr ? 'اليوم' : 'Today'} value={fmtIQD(stats.revenueToday)} />
+          <PeriodRow label={isAr ? 'آخر 7 أيام' : 'Last 7 days'} value={fmtIQD(stats.revenue7)} />
+          <PeriodRow label={isAr ? 'آخر 30 يوم' : 'Last 30 days'} value={fmtIQD(stats.revenue30)} />
+        </div>
+      </section>
+
+      {/* توزيع حالات الطلبات */}
+      <section className="border border-victorian-200 bg-cream-50/60 p-6 dark:border-victorian-800 dark:bg-victorian-950/40">
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <h2 className="font-display text-sm font-bold uppercase tracking-[0.2em] text-victorian-800 dark:text-cream-200">
+            {isAr ? 'توزيع الحالات' : 'Status breakdown'}
+          </h2>
+          <span className="text-xs text-victorian-500">
+            {isAr ? `قيد المعالجة: ${formatNumberEn(stats.inProgress)}` : `In progress: ${formatNumberEn(stats.inProgress)}`}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {STATUS_LABELS.map((s) => {
+            const count = stats.statusCount[s.key] ?? 0
+            const pct = stats.totalOrders > 0 ? Math.round((count / stats.totalOrders) * 100) : 0
+            return (
+              <div key={s.key} className={`border p-3 text-center ${s.cls}`}>
+                <div className="font-display text-2xl font-bold leading-none">{formatNumberEn(count)}</div>
+                <div className="mt-1 text-[11px] font-semibold uppercase tracking-wider opacity-80">
+                  {isAr ? s.ar : s.en}
+                </div>
+                <div className="mt-1 text-[10px] opacity-60">{pct}%</div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* أعلى المنتجات مبيعاً */}
+      <section className="border border-victorian-200 bg-cream-50/60 p-6 dark:border-victorian-800 dark:bg-victorian-950/40">
+        <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.2em] text-victorian-800 dark:text-cream-200">
+          {isAr ? 'الأكثر مبيعاً' : 'Top sellers'}
+        </h2>
+        {stats.topProducts.length === 0 ? (
+          <p className="py-6 text-center text-xs text-victorian-500">
+            {isAr ? 'لم يتم توصيل أي طلب بعد ليتم احتسابه هنا' : 'No delivered orders yet to rank'}
+          </p>
+        ) : (
+          <ol className="space-y-2">
+            {stats.topProducts.map((p, idx) => {
+              const max = stats.topProducts[0]?.qty || 1
+              const pct = Math.max(6, Math.round((p.qty / max) * 100))
+              return (
+                <li key={p.name} className="border border-victorian-200 bg-cream-50 p-3 dark:border-victorian-800 dark:bg-victorian-950">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="flex min-w-0 items-baseline gap-2">
+                      <span className="font-display text-xs font-bold text-burgundy-700 dark:text-victorian-300">
+                        {String(idx + 1).padStart(2, '0')}
+                      </span>
+                      <span className="truncate text-sm font-semibold text-victorian-900 dark:text-cream-100">
+                        {p.name}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs text-victorian-600 dark:text-cream-300">
+                      {formatNumberEn(p.qty)} {isAr ? 'قطعة' : 'pcs'} · {fmtIQD(p.revenue)}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 w-full overflow-hidden bg-victorian-100 dark:bg-victorian-900">
+                    <div
+                      className="h-full bg-burgundy-600 transition-all dark:bg-victorian-400"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function StatCard({
+  icon, label, value, hint, tone, to,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  hint: string
+  tone: 'emerald' | 'indigo' | 'amber' | 'rose'
+  to?: string
+}) {
+  const toneCls: Record<typeof tone, string> = {
+    emerald: 'text-emerald-700 dark:text-emerald-300',
+    indigo:  'text-indigo-700 dark:text-indigo-300',
+    amber:   'text-amber-700 dark:text-amber-300',
+    rose:    'text-rose-700 dark:text-rose-300',
+  }
+  const baseCls = 'block border border-victorian-200 bg-cream-50 p-5 dark:border-victorian-800 dark:bg-victorian-950'
+  const interactiveCls = to
+    ? ' cursor-pointer transition hover:-translate-y-0.5 hover:border-burgundy-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-burgundy-500 dark:hover:border-victorian-500'
+    : ''
+
+  const inner = (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-victorian-500">
+          {label}
+        </p>
+        <span className={toneCls[tone]}>{icon}</span>
+      </div>
+      <p className="mt-3 break-words font-display text-2xl font-bold text-victorian-900 dark:text-cream-50">
+        {value}
+      </p>
+      <p className="mt-1 text-[11px] text-victorian-500">{hint}</p>
+    </>
+  )
+
+  if (to) {
+    return (
+      <Link to={to} className={baseCls + interactiveCls}>
+        {inner}
+      </Link>
+    )
+  }
+  return <div className={baseCls}>{inner}</div>
+}
+
+function PeriodRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-victorian-200 bg-cream-50 p-4 text-center dark:border-victorian-800 dark:bg-victorian-950">
+      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-victorian-500">
+        {label}
+      </p>
+      <p className="mt-2 font-display text-lg font-bold text-victorian-900 dark:text-cream-50">
+        {value}
+      </p>
     </div>
   )
 }

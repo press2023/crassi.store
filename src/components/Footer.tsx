@@ -1,8 +1,21 @@
 import { Instagram } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useLanguage } from '../context/LanguageContext'
 
 export function Footer() {
   const { isAr, t } = useLanguage()
+
+  const legalLinks = isAr
+    ? [
+        { to: '/faq', label: 'الأسئلة الشائعة' },
+        { to: '/privacy', label: 'سياسة الخصوصية' },
+        { to: '/terms', label: 'الشروط والأحكام' },
+      ]
+    : [
+        { to: '/faq', label: 'FAQ' },
+        { to: '/privacy', label: 'Privacy' },
+        { to: '/terms', label: 'Terms' },
+      ]
 
   return (
     <footer className="mt-10 border-t border-victorian-200/60 bg-cream-100/80 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] dark:border-victorian-800 dark:bg-victorian-950/70">
@@ -36,6 +49,22 @@ export function Footer() {
               <span className="font-semibold text-victorian-700 dark:text-cream-200">Reno Codes</span>
             </p>
           </div>
+
+          <nav className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-[11px] font-medium text-victorian-600 dark:text-cream-300">
+            {legalLinks.map((l, i) => (
+              <span key={l.to} className="flex items-center gap-3">
+                <Link
+                  to={l.to}
+                  className="transition hover:text-burgundy-700 hover:underline underline-offset-4 dark:hover:text-cream-50"
+                >
+                  {l.label}
+                </Link>
+                {i < legalLinks.length - 1 ? (
+                  <span aria-hidden className="text-victorian-300 dark:text-victorian-700">·</span>
+                ) : null}
+              </span>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>

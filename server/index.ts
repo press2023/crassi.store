@@ -442,6 +442,9 @@ app.get('/sitemap.xml', async (req, res) => {
       { path: '/products', priority: '0.9', changefreq: 'daily' },
       { path: '/sale', priority: '0.95', changefreq: 'daily' },
       { path: '/about', priority: '0.6', changefreq: 'monthly' },
+      { path: '/faq', priority: '0.7', changefreq: 'monthly' },
+      { path: '/privacy', priority: '0.4', changefreq: 'yearly' },
+      { path: '/terms', priority: '0.4', changefreq: 'yearly' },
       { path: '/reviews', priority: '0.7', changefreq: 'weekly' },
     ]
 
