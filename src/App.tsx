@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ScrollToTop } from './components/ScrollToTop'
+import { SplashScreen } from './components/SplashScreen'
 import { About } from './pages/About'
 import { Admin } from './pages/Admin'
 import { AdminEditProduct } from './pages/AdminEditProduct'
@@ -25,6 +26,7 @@ import { FAQ } from './pages/FAQ'
 export default function App() {
   return (
     <>
+    <SplashScreen />
     <ScrollToTop />
     <Routes>
       <Route element={<Layout />}>
