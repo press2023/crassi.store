@@ -12,6 +12,7 @@ import uploadRoutes from './routes/upload.js'
 import settingsRoutes from './routes/settings.js'
 import visitorsRoutes from './routes/visitors.js'
 import reviewsRoutes from './routes/reviews.js'
+import productRatingsRoutes from './routes/productRatings.js'
 import pushRoutes from './routes/push.js'
 import discountsRoutes, { evaluateDiscount } from './routes/discounts.js'
 import { sendPushToAll } from './lib/push.js'
@@ -117,6 +118,7 @@ app.use('/api/upload', uploadRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/visitors', visitorsRoutes)
 app.use('/api/reviews', reviewsRoutes)
+app.use('/api/products', productRatingsRoutes)
 app.use('/api/admin/push', pushRoutes)
 app.use('/api/discounts', discountsRoutes)
 
@@ -445,7 +447,6 @@ app.get('/sitemap.xml', async (req, res) => {
       { path: '/faq', priority: '0.7', changefreq: 'monthly' },
       { path: '/privacy', priority: '0.4', changefreq: 'yearly' },
       { path: '/terms', priority: '0.4', changefreq: 'yearly' },
-      { path: '/reviews', priority: '0.7', changefreq: 'weekly' },
     ]
 
     const [products, categories] = await Promise.all([

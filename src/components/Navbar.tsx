@@ -13,7 +13,6 @@ import {
   PanelLeftClose,
   Search,
   ShoppingBag,
-  Star,
   Sun,
   Tag,
   Eye,
@@ -218,10 +217,6 @@ export function Navbar() {
             {isAdmin ? (lang === 'ar' ? 'لوحة التحكم' : 'Dashboard') : t('navLogin')}
           </Link>
           <div className="my-2 border-t border-victorian-200 dark:border-victorian-800" />
-          <NavLink to="/reviews" className={linkClass}>
-            <Star className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
-            {t('navRatingsAndReviews')}
-          </NavLink>
           <NavLink to="/visitors" className={linkClass}>
             <Eye className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
             {t('navVisitors')}

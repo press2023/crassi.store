@@ -6,7 +6,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { formatNumberEn } from '../lib/formatDigits'
 import { getPricing } from '../lib/price'
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product, shine = false }: { product: Product; shine?: boolean }) {
   const { isAr } = useLanguage()
   const { add } = useCart()
   const title = isAr ? product.nameAr : product.name
@@ -45,6 +45,12 @@ export function ProductCard({ product }: { product: Product }) {
           width="600"
           height="800"
         />
+        {shine && (
+          <span
+            aria-hidden
+            className="shine-overlay pointer-events-none absolute inset-0 overflow-hidden rounded-2xl"
+          />
+        )}
         {/* الشارات: نُظهر التخفيض أولاً، ثم "مميز" إن لم يكن عليه تخفيض، و"نفد" دائماً عند انعدام المخزون */}
         {pricing.hasDiscount && (
           <span className="absolute start-2 top-2 rounded-full bg-rose-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-sm">

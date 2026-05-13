@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Check, ChevronRight, Home, Minus, Plus, ShoppingBag, Share2 } from 'lucide-react'
-import { fetchProductBySlug, fetchProducts, fetchReviews } from '../api'
+import { fetchProductBySlug, fetchProducts } from '../api'
 import { useCart } from '../context/CartContext'
 import { useLanguage } from '../context/LanguageContext'
 import { ProductCard } from '../components/ProductCard'
 import { ProductCardShimmer, ProductDetailShimmer } from '../components/Shimmer'
 import { ImageViewer } from '../components/ImageViewer'
+import { ProductRatingStars } from '../components/ProductRatingStars'
 import { SEO } from '../components/SEO'
 import { breadcrumbLD, buildCanonical, productLD } from '../lib/seo'
 import { formatNumberEn } from '../lib/formatDigits'
@@ -27,20 +28,6 @@ export function ProductDetail() {
   const [qty, setQty] = useState(1)
   const [selectedSize, setSelectedSize] = useState('')
   const [added, setAdded] = useState(false)
-  const [siteRating, setSiteRating] = useState<{ value: number; count: number } | null>(null)
-
-  // متوسط تقييم الموقع — يُستخدم في AggregateRating لمنتجات الموقع
-  useEffect(() => {
-    let ok = true
-    fetchReviews()
-      .then((r) => {
-        if (!ok) return
-        if (r.count > 0 && r.average > 0) setSiteRating({ value: r.average, count: r.count })
-      })
-      .catch(() => {})
-    return () => { ok = false }
-  }, [])
-
   useEffect(() => {
     if (!slug) return
     let ok = true
@@ -111,7 +98,7 @@ export function ProductDetail() {
           stock: product.stock,
           category: product.category ?? null,
         },
-        { isAr, canonical: canonicalUrl, rating: siteRating },
+        { isAr, canonical: canonicalUrl, rating: null },
       ),
       breadcrumbLD([
         { name: isAr ? 'الرئيسية' : 'Home', url: buildCanonical('/') },
@@ -125,7 +112,7 @@ export function ProductDetail() {
         { name: tt, url: canonicalUrl },
       ]),
     ]
-  }, [product, isAr, siteRating])
+  }, [product, isAr])
 
   if (err || !slug) {
     return (
@@ -300,7 +287,7 @@ export function ProductDetail() {
             )}
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             {canBuy ? (
               <div className="inline-flex items-center rounded-xl border border-victorian-200 bg-transparent px-3 py-2 text-xs font-semibold text-victorian-800 shadow-sm dark:border-victorian-600 dark:bg-transparent dark:text-victorian-200">
                 {isAr ? 'متوفر' : 'In stock'} — {product.stock} {isAr ? 'قطعة' : 'units'}
@@ -310,6 +297,8 @@ export function ProductDetail() {
                 {t('outOfStock')}
               </div>
             )}
+            {/* Star rating — opens modal on click (per-visitor, one rating each) */}
+            <ProductRatingStars productId={product.id} />
           </div>
 
           {canBuy && product.sizes.length > 0 && (
@@ -433,10 +422,10 @@ export function ProductDetail() {
 
       {/* Similar */}
       {(similarLoading || similar.length > 0) && (
-        <section className="mt-16 border-t border-slate-100 pt-10 dark:border-slate-800">
+        <section className="mt-16 border-t border-victorian-200 pt-10 dark:border-victorian-800">
           <h2 className="mb-6 text-lg font-bold text-slate-900 dark:text-white">{t('similarProducts')}</h2>
           <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
-            {similarLoading ? Array.from({ length: 4 }).map((_, i) => <ProductCardShimmer key={i} />) : similar.map((p) => <ProductCard key={p.id} product={p} />)}
+            {similarLoading ? Array.from({ length: 4 }).map((_, i) => <ProductCardShimmer key={i} />) : similar.map((p) => <ProductCard key={p.id} product={p} shine />)}
           </div>
         </section>
       )}

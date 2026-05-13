@@ -144,6 +144,70 @@ export async function deleteMyReview(reviewId: string, deleteToken: string): Pro
   }
 }
 
+// ── تقييم المنتجات بالنجوم (لكل زائر) ───────────────
+
+export type ProductRatingSummary = {
+  count: number
+  average: number
+  distribution: { 1: number; 2: number; 3: number; 4: number; 5: number }
+  /** تقييم الزائر الحالي إن وُجد */
+  mine: number | null
+}
+
+const EMPTY_RATING_SUMMARY: ProductRatingSummary = {
+  count: 0,
+  average: 0,
+  distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  mine: null,
+}
+
+export async function fetchProductRatings(
+  productId: string,
+  visitorId?: string,
+): Promise<ProductRatingSummary> {
+  try {
+    const qs = visitorId ? `?visitorId=${encodeURIComponent(visitorId)}` : ''
+    const res = await fetch(`${base}/api/products/${encodeURIComponent(productId)}/ratings${qs}`)
+    if (!res.ok) return { ...EMPTY_RATING_SUMMARY }
+    return (await res.json()) as ProductRatingSummary
+  } catch {
+    return { ...EMPTY_RATING_SUMMARY }
+  }
+}
+
+export class AlreadyRatedError extends Error {
+  summary: ProductRatingSummary
+  constructor(summary: ProductRatingSummary) {
+    super('already_rated')
+    this.name = 'AlreadyRatedError'
+    this.summary = summary
+  }
+}
+
+export async function submitProductRating(
+  productId: string,
+  visitorId: string,
+  rating: number,
+): Promise<ProductRatingSummary> {
+  const res = await fetch(`${base}/api/products/${encodeURIComponent(productId)}/ratings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ visitorId, rating }),
+  })
+  if (res.status === 409) {
+    const data = (await res.json().catch(() => null)) as
+      | (ProductRatingSummary & { error?: string })
+      | null
+    if (data && typeof data.average === 'number') {
+      const { error: _err, ...rest } = data
+      void _err
+      throw new AlreadyRatedError(rest as ProductRatingSummary)
+    }
+    throw new AlreadyRatedError({ ...EMPTY_RATING_SUMMARY })
+  }
+  return parseJson<ProductRatingSummary>(res)
+}
+
 export async function createOrder(payload: {
   customerName: string
   email?: string

@@ -5,7 +5,7 @@ import type { VisitorStats } from '../api'
 const STORAGE_KEY = 'classi-visitor-id'
 const SESSION_KEY = 'classi-visitor-sent'
 
-function getOrCreateVisitorId(): string {
+export function getOrCreateVisitorId(): string {
   if (typeof localStorage === 'undefined') return ''
   let id = localStorage.getItem(STORAGE_KEY)
   if (!id) {

@@ -6,7 +6,6 @@ import {
   PanelLeftClose,
   Search,
   ShoppingBag,
-  Star,
   MapPin,
   Tag,
   Eye,
@@ -102,10 +101,6 @@ export function SiteSidebar() {
           {isAdmin ? (lang === 'ar' ? 'لوحة التحكم' : 'Dashboard') : t('navLogin')}
         </NavLink>
         <div className="my-2 border-t border-victorian-200 dark:border-victorian-800" />
-        <NavLink to="/reviews" className={itemClass}>
-          <Star className="h-4 w-4 shrink-0" />
-          {t('navRatingsAndReviews')}
-        </NavLink>
         <NavLink to="/visitors" className={itemClass}>
           <Eye className="h-4 w-4 shrink-0" />
           {t('navVisitors')}

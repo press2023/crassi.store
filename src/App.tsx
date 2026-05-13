@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ScrollToTop } from './components/ScrollToTop'
 import { About } from './pages/About'
@@ -16,7 +16,6 @@ import { ProductDetail } from './pages/ProductDetail'
 import { Products } from './pages/Products'
 import { Search } from './pages/Search'
 import { TrackOrder } from './pages/TrackOrder'
-import { ReviewsPage } from './pages/ReviewsPage'
 import { Sale } from './pages/Sale'
 import { VisitorsPage } from './pages/VisitorsPage'
 import { Privacy } from './pages/Privacy'
@@ -41,8 +40,6 @@ export default function App() {
         <Route path="privacy" element={<Privacy />} />
         <Route path="terms" element={<Terms />} />
         <Route path="faq" element={<FAQ />} />
-        <Route path="ratings" element={<Navigate to="/reviews" replace />} />
-        <Route path="reviews" element={<ReviewsPage />} />
         <Route path="visitors" element={<VisitorsPage />} />
         <Route path="track" element={<TrackOrder />} />
         <Route path="order/:id" element={<TrackOrder />} />
