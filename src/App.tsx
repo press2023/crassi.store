@@ -1,6 +1,8 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ScrollToTop } from './components/ScrollToTop'
+import { PageLockGuard } from './components/PageLockGuard'
+import { PageLockProvider } from './context/PageLockContext'
 import { About } from './pages/About'
 import { Admin } from './pages/Admin'
 import { AdminEditProduct } from './pages/AdminEditProduct'
@@ -25,35 +27,35 @@ import { Coins } from './pages/Coins'
 
 export default function App() {
   return (
-    <>
-    <ScrollToTop />
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<Home />} />
-        <Route path="products" element={<Products />} />
-        <Route path="sale" element={<Sale />} />
-        <Route path="search" element={<Search />} />
-        <Route path="category/:slug" element={<CategoryPage />} />
-        <Route path="product/:slug" element={<ProductDetail />} />
-        <Route path="cart" element={<Cart />} />
-        <Route path="checkout" element={<Checkout />} />
-        <Route path="about" element={<About />} />
-        <Route path="privacy" element={<Privacy />} />
-        <Route path="terms" element={<Terms />} />
-        <Route path="faq" element={<FAQ />} />
-        <Route path="visitors" element={<VisitorsPage />} />
-        <Route path="coins" element={<Coins />} />
-        <Route path="track" element={<TrackOrder />} />
-        <Route path="order/:id" element={<TrackOrder />} />
-        <Route path="login" element={<Login />} />
-        <Route path="admin" element={<Admin />} />
-        <Route path="admin/sales/products" element={<AdminSalesProducts />} />
-        <Route path="admin/orders/:id" element={<AdminOrder />} />
-        <Route path="admin/product/new" element={<AdminEditProduct />} />
-        <Route path="admin/product/:id" element={<AdminEditProduct />} />
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
-    </>
+    <PageLockProvider>
+      <ScrollToTop />
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="products" element={<PageLockGuard><Products /></PageLockGuard>} />
+          <Route path="sale" element={<PageLockGuard><Sale /></PageLockGuard>} />
+          <Route path="search" element={<PageLockGuard><Search /></PageLockGuard>} />
+          <Route path="category/:slug" element={<PageLockGuard><CategoryPage /></PageLockGuard>} />
+          <Route path="product/:slug" element={<ProductDetail />} />
+          <Route path="cart" element={<PageLockGuard><Cart /></PageLockGuard>} />
+          <Route path="checkout" element={<PageLockGuard><Checkout /></PageLockGuard>} />
+          <Route path="about" element={<PageLockGuard><About /></PageLockGuard>} />
+          <Route path="privacy" element={<PageLockGuard><Privacy /></PageLockGuard>} />
+          <Route path="terms" element={<PageLockGuard><Terms /></PageLockGuard>} />
+          <Route path="faq" element={<PageLockGuard><FAQ /></PageLockGuard>} />
+          <Route path="visitors" element={<PageLockGuard><VisitorsPage /></PageLockGuard>} />
+          <Route path="coins" element={<PageLockGuard><Coins /></PageLockGuard>} />
+          <Route path="track" element={<PageLockGuard path="/track"><TrackOrder /></PageLockGuard>} />
+          <Route path="order/:id" element={<PageLockGuard path="/track"><TrackOrder /></PageLockGuard>} />
+          <Route path="login" element={<Login />} />
+          <Route path="admin" element={<Admin />} />
+          <Route path="admin/sales/products" element={<AdminSalesProducts />} />
+          <Route path="admin/orders/:id" element={<AdminOrder />} />
+          <Route path="admin/product/new" element={<AdminEditProduct />} />
+          <Route path="admin/product/:id" element={<AdminEditProduct />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </PageLockProvider>
   )
 }

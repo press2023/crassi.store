@@ -31,6 +31,8 @@ import {
   Users,
   Shield,
   X,
+  Lock,
+  Unlock,
 } from 'lucide-react'
 import { SEO } from '../components/SEO'
 import { useAuth } from '../context/AuthContext'
@@ -235,6 +237,8 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // ── قفل الصفحات ──
+  const [lockedPages, setLockedPages] = useState<string[]>([])
 
   useEffect(() => {
     fetch(`${base}/api/settings`)
@@ -247,6 +251,7 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
         aboutTitleEn?: string
         aboutBodyEn?: string
         saleBannerImage?: string
+        locked_pages?: string
       }) => {
         setHeroUrl(s.heroImage ?? '')
         setHeroTitle(s.heroTitle ?? '')
@@ -255,6 +260,11 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
         setAboutTitleEn(s.aboutTitleEn ?? '')
         setAboutBodyEn(s.aboutBodyEn ?? '')
         setSaleBannerUrl(s.saleBannerImage ?? '')
+        try {
+          setLockedPages(JSON.parse(s.locked_pages ?? '[]'))
+        } catch {
+          setLockedPages([])
+        }
       })
       .catch(() => { /* ignore */ })
   }, [])
@@ -334,6 +344,7 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
           aboutTitleEn: aboutTitleEn || null,
           aboutBodyEn: aboutBodyEn || null,
           saleBannerImage: saleBannerPayload,
+          locked_pages: JSON.stringify(lockedPages),
         }),
       })
       if (res.ok) {
@@ -541,6 +552,59 @@ function SiteTab({ token, isAr }: { token: string; isAr: boolean }) {
               />
             </label>
           </div>
+        </div>
+      </div>
+
+      {/* قفل الصفحات */}
+      <div className="border border-victorian-200 bg-cream-50 p-5 dark:border-victorian-800 dark:bg-victorian-950/60">
+        <h2 className="mb-1 font-display text-lg font-bold text-victorian-900 dark:text-cream-50">
+          {isAr ? 'قفل الصفحات' : 'Page locks'}
+        </h2>
+        <p className="mb-4 text-xs text-victorian-500">
+          {isAr
+            ? 'اختر الصفحات التي تريد إغلاقها أمام الزوار. الصفحة الرئيسية وصفحة تسجيل الدخول ولوحة التحكم لا تُقفل.'
+            : 'Choose which pages to lock for visitors. Home, Login, and Admin cannot be locked.'}
+        </p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { path: '/products', labelAr: 'المنتجات', labelEn: 'Products' },
+            { path: '/sale', labelAr: 'التخفيضات', labelEn: 'Sale' },
+            { path: '/search', labelAr: 'البحث', labelEn: 'Search' },
+            { path: '/cart', labelAr: 'السلة', labelEn: 'Cart' },
+            { path: '/checkout', labelAr: 'الدفع', labelEn: 'Checkout' },
+            { path: '/about', labelAr: 'من نحن', labelEn: 'About' },
+            { path: '/privacy', labelAr: 'الخصوصية', labelEn: 'Privacy' },
+            { path: '/terms', labelAr: 'الشروط', labelEn: 'Terms' },
+            { path: '/faq', labelAr: 'الأسئلة', labelEn: 'FAQ' },
+            { path: '/visitors', labelAr: 'الزوار', labelEn: 'Visitors' },
+            { path: '/coins', labelAr: 'القطع الذهبية', labelEn: 'Royal Coins' },
+            { path: '/track', labelAr: 'تتبع الطلب', labelEn: 'Track Order' },
+          ].map((p) => {
+            const isLocked = lockedPages.includes(p.path)
+            return (
+              <button
+                key={p.path}
+                type="button"
+                onClick={() =>
+                  setLockedPages((prev) =>
+                    prev.includes(p.path) ? prev.filter((x) => x !== p.path) : [...prev, p.path],
+                  )
+                }
+                className={`flex items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm transition ${
+                  isLocked
+                    ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200'
+                    : 'border-victorian-200 bg-white text-victorian-700 dark:border-victorian-700 dark:bg-victorian-950 dark:text-cream-200'
+                }`}
+              >
+                <span className="font-medium">{isAr ? p.labelAr : p.labelEn}</span>
+                {isLocked ? (
+                  <Lock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <Unlock className="h-4 w-4 shrink-0 text-victorian-400 dark:text-victorian-500" />
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 

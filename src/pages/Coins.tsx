@@ -32,6 +32,77 @@ function isValidPhoneInput(s: string): boolean {
   return s.replace(/\D+/g, '').length >= 8
 }
 
+/** قطعة شيمر فيكتورية بحواف دائرية وحجم قابل للتخصيص. */
+function Shimmer({ className = '' }: { className?: string }) {
+  return <div className={`royal-shimmer rounded-xl ${className}`} aria-hidden="true" />
+}
+
+/** هيكل تحميل عادي ومهيكل لصفحة القطع. */
+function CoinsSkeleton({ isAr }: { isAr: boolean }) {
+  return (
+    <div className="space-y-8" aria-busy="true" aria-live="polite">
+      {/* بطاقة الرصيد */}
+      <section className="rounded-3xl border border-amber-200/50 bg-gradient-to-br from-amber-50/60 via-cream-50 to-amber-50/60 p-6 shadow-sm dark:border-amber-800/30 dark:from-amber-900/20 dark:via-victorian-950 dark:to-amber-950/20">
+        <Shimmer className="h-3 w-28" />
+        <div className="mt-4 flex items-center gap-4">
+          <Shimmer className="h-16 w-16 !rounded-full" />
+          <Shimmer className="h-12 w-44" />
+        </div>
+        <Shimmer className="mt-3 h-3 w-36" />
+
+        {/* بطاقتا المكسوب/المُستبدل */}
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-cream-100/50 px-4 py-3 dark:bg-victorian-900/30">
+            <div className="flex items-center gap-2">
+              <Shimmer className="h-4 w-4 !rounded-full" />
+              <Shimmer className="h-3 w-16" />
+            </div>
+            <Shimmer className="mt-2 h-7 w-20" />
+          </div>
+          <div className="rounded-2xl bg-amber-50/40 px-4 py-3 dark:bg-victorian-900/30">
+            <div className="flex items-center gap-2">
+              <Shimmer className="h-4 w-4 !rounded-full" />
+              <Shimmer className="h-3 w-16" />
+            </div>
+            <Shimmer className="mt-2 h-7 w-20" />
+          </div>
+        </div>
+      </section>
+
+      {/* عنوان متجر الأكواد */}
+      <div className="space-y-3">
+        <Shimmer className="mx-auto h-5 w-44" />
+        <Shimmer className="mx-auto h-3 w-72" />
+      </div>
+
+      {/* بطاقات المستويات */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="rounded-2xl border border-victorian-200/50 bg-cream-50/50 p-4 shadow-sm dark:border-victorian-800/40 dark:bg-victorian-950/50"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-2">
+                <Shimmer className="h-3 w-16" />
+                <Shimmer className="h-10 w-20" />
+              </div>
+              <Shimmer className="h-16 w-16 !rounded-full" />
+            </div>
+            <Shimmer className="mt-4 h-4 w-28" />
+            <Shimmer className="mt-3 h-1.5 w-full" />
+            <Shimmer className="mt-4 h-10 w-full" />
+          </div>
+        ))}
+      </div>
+
+      <p className="text-center text-xs italic text-victorian-500 dark:text-victorian-400">
+        {isAr ? '◆ يتمّ تحميل بياناتك… ◆' : '◆ Loading your data… ◆'}
+      </p>
+    </div>
+  )
+}
+
 function relativeTime(iso: string, isAr: boolean): string {
   const diff = Date.now() - new Date(iso).getTime()
   const m = Math.floor(diff / 60_000)
@@ -200,11 +271,6 @@ export function Coins() {
         <h1 className="font-display text-3xl font-bold text-victorian-900 dark:text-cream-50 sm:text-4xl">
           {isAr ? 'القطع الذهبية الملكية' : 'Royal Gold Coins'}
         </h1>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-victorian-600 dark:text-cream-300">
-          {isAr
-            ? 'مع كل طلب يصلك، تربح قطعًا ذهبية ملكية. استبدلها متى شئت بكود خصم في متجر الأكواد.'
-            : 'Earn royal gold coins on every delivered order, then redeem them for discount codes anytime.'}
-        </p>
       </div>
 
       {/* لو ما عنده طلب سابق محفوظ */}
@@ -262,13 +328,43 @@ export function Coins() {
         </div>
       )}
 
-      {/* الحساب */}
+      {/* أزرار التحكم والرقم — فوق بطاقة الرصيد */}
       {activePhone && (
-        <>
+        <div className="mb-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4">
+          <p className="text-xs font-medium text-victorian-600 dark:text-cream-300" dir="ltr">
+            📱 {activePhone}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => activePhone && reload(activePhone)}
+              disabled={loading}
+              className="rounded-xl border border-victorian-300 bg-white/70 px-4 py-2 text-xs font-semibold text-victorian-700 transition hover:bg-white disabled:opacity-50 dark:border-victorian-700 dark:bg-victorian-900/50 dark:text-cream-200"
+              title={isAr ? 'تحديث' : 'Refresh'}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="rounded-xl border border-victorian-300 bg-white/70 px-4 py-2 text-xs font-semibold text-victorian-700 transition hover:bg-white dark:border-victorian-700 dark:bg-victorian-900/50 dark:text-cream-200"
+            >
+              {isAr ? 'تبديل الرقم' : 'Change phone'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* شيمر التحميل الأولي — قبل وصول البيانات */}
+      {activePhone && loading && !account && <CoinsSkeleton isAr={isAr} />}
+
+      {/* الحساب — ينزلق بسلاسة بعد الشيمر */}
+      {activePhone && account && (
+        <div className="animate-[contentFadeIn_0.5s_ease-out_both]">
           {/* بطاقة الرصيد */}
           <section className="relative mb-8 overflow-hidden rounded-3xl border border-amber-300/40 bg-gradient-to-br from-amber-100 via-cream-50 to-amber-50 p-6 shadow-[0_8px_30px_-12px_rgba(180,120,30,0.35)] dark:border-amber-500/20 dark:from-amber-900/30 dark:via-victorian-950/80 dark:to-amber-950/30">
-            <div className="absolute -end-16 -top-16 opacity-25 dark:opacity-15">
-              <RoyalCoinIcon size={320} />
+            <div className="absolute -end-6 -top-10 opacity-15 dark:opacity-10">
+              <RoyalCoinIcon size={220} />
             </div>
             <div className="relative flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -276,7 +372,7 @@ export function Coins() {
                   {isAr ? 'رصيدك الملكي' : 'Royal Balance'}
                 </p>
                 <div className="mt-2 flex items-center gap-3">
-                  <RoyalCoinIcon size={72} />
+                  <RoyalCoinIcon size={88} />
                   <span className="font-display text-5xl font-bold tabular-nums leading-none text-victorian-900 dark:text-cream-50">
                     {formatNumberEn(balance)}
                   </span>
@@ -284,65 +380,34 @@ export function Coins() {
                     {isAr ? 'قطعة' : 'coins'}
                   </span>
                 </div>
-                <p className="mt-2 text-xs text-victorian-600 dark:text-cream-300" dir="ltr">
-                  📱 {activePhone}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => activePhone && reload(activePhone)}
-                  disabled={loading}
-                  className="rounded-xl border border-victorian-300 bg-white/70 px-3 py-2 text-xs font-semibold text-victorian-700 transition hover:bg-white disabled:opacity-50 dark:border-victorian-700 dark:bg-victorian-900/50 dark:text-cream-200"
-                  title={isAr ? 'تحديث' : 'Refresh'}
-                >
-                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="rounded-xl border border-victorian-300 bg-white/70 px-3 py-2 text-xs font-semibold text-victorian-700 transition hover:bg-white dark:border-victorian-700 dark:bg-victorian-900/50 dark:text-cream-200"
-                >
-                  {isAr ? 'تبديل الرقم' : 'Change phone'}
-                </button>
               </div>
             </div>
 
             {account && (
-              <div className="relative mt-5 grid grid-cols-2 gap-3">
-                {/* بطاقة الكسب */}
-                <div className="overflow-hidden rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-4 py-4 shadow-sm dark:border-emerald-600/60 dark:bg-emerald-900/30">
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                {/* الكسب — خلفية كريمية هادئة */}
+                <div className="rounded-2xl bg-cream-100/70 px-4 py-3 dark:bg-victorian-900/50">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
-                      <TrendingUp className="h-4 w-4" />
-                    </span>
-                    <span className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800 dark:text-emerald-200">
-                      {isAr ? 'إجمالي المكسوب' : 'Total earned'}
+                    <TrendingUp className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
+                    <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-victorian-600 dark:text-cream-300">
+                      {isAr ? 'المكسوب' : 'Earned'}
                     </span>
                   </div>
-                  <p className="mt-2 font-display text-2xl font-bold tabular-nums text-emerald-900 dark:text-emerald-100 sm:text-3xl">
+                  <p className="mt-1 font-display text-xl font-bold tabular-nums text-victorian-900 dark:text-cream-50">
                     {formatNumberEn(account.totalEarned)}
-                    <span className="ms-1 text-xs font-semibold text-emerald-700/80 dark:text-emerald-300/80">
-                      {isAr ? 'قطعة' : 'coins'}
-                    </span>
                   </p>
                 </div>
 
-                {/* بطاقة الاستبدال */}
-                <div className="overflow-hidden rounded-2xl border-2 border-rose-300 bg-rose-50 px-4 py-4 shadow-sm dark:border-rose-600/60 dark:bg-rose-900/30">
+                {/* الاستبدال — خلفية هادئة وردية خفيفة */}
+                <div className="rounded-2xl bg-amber-50/70 px-4 py-3 dark:bg-victorian-900/50">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-600 text-white shadow-sm">
-                      <TrendingDown className="h-4 w-4" />
-                    </span>
-                    <span className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-rose-800 dark:text-rose-200">
-                      {isAr ? 'إجمالي المُستبدل' : 'Total spent'}
+                    <TrendingDown className="h-4 w-4 shrink-0 text-burgundy-700 dark:text-burgundy-400" />
+                    <span className="font-display text-[10px] font-semibold uppercase tracking-[0.2em] text-victorian-600 dark:text-cream-300">
+                      {isAr ? 'المُستبدل' : 'Spent'}
                     </span>
                   </div>
-                  <p className="mt-2 font-display text-2xl font-bold tabular-nums text-rose-900 dark:text-rose-100 sm:text-3xl">
+                  <p className="mt-1 font-display text-xl font-bold tabular-nums text-victorian-900 dark:text-cream-50">
                     {formatNumberEn(account.totalSpent)}
-                    <span className="ms-1 text-xs font-semibold text-rose-700/80 dark:text-rose-300/80">
-                      {isAr ? 'قطعة' : 'coins'}
-                    </span>
                   </p>
                 </div>
               </div>
@@ -553,7 +618,7 @@ export function Coins() {
               </ul>
             </section>
           )}
-        </>
+        </div>
       )}
     </div>
   )

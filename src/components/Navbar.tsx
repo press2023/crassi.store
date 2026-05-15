@@ -178,15 +178,6 @@ export function Navbar() {
               ) : null}
             </span>
           </NavLink>
-          <NavLink to="/coins" className={linkClass}>
-            <Crown className="h-5 w-5 shrink-0 text-amber-500 sm:h-4 sm:w-4" />
-            <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-              {isAr ? 'متجر الأكواد' : 'Coupons Store'}
-              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                {isAr ? 'جديد' : 'NEW'}
-              </span>
-            </span>
-          </NavLink>
         </nav>
 
         <div className="mt-6 border-t border-victorian-200 pt-4 dark:border-victorian-800">
@@ -230,6 +221,15 @@ export function Navbar() {
           <NavLink to="/visitors" className={linkClass}>
             <Eye className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" />
             {t('navVisitors')}
+          </NavLink>
+          <NavLink to="/coins" className={linkClass}>
+            <Crown className="h-5 w-5 shrink-0 text-amber-500 sm:h-4 sm:w-4" />
+            <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+              {isAr ? 'متجر الأكواد' : 'Coupons Store'}
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                {isAr ? 'جديد' : 'NEW'}
+              </span>
+            </span>
           </NavLink>
         </div>
       </MobileDrawer>

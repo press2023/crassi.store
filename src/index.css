@@ -159,6 +159,61 @@
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
+
+  /* ─── شيمر فيكتوري ذهبي متحرّك للهيكل (skeleton) ─── */
+  .royal-shimmer {
+    position: relative;
+    overflow: hidden;
+    background-color: rgb(var(--victorian-200, 230 220 200) / 0.55);
+    isolation: isolate;
+  }
+  :is(.dark) .royal-shimmer {
+    background-color: rgb(40 32 28 / 0.55);
+  }
+  .royal-shimmer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(245, 200, 100, 0.18) 30%,
+      rgba(255, 235, 180, 0.55) 50%,
+      rgba(245, 200, 100, 0.18) 70%,
+      transparent 100%
+    );
+    animation: royalShimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  :is(.dark) .royal-shimmer::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(180, 140, 70, 0.15) 30%,
+      rgba(220, 180, 110, 0.35) 50%,
+      rgba(180, 140, 70, 0.15) 70%,
+      transparent 100%
+    );
+  }
+  [dir='rtl'] .royal-shimmer::before {
+    animation-name: royalShimmerRtl;
+  }
+  @keyframes royalShimmer {
+    100% { transform: translateX(100%); }
+  }
+  @keyframes royalShimmerRtl {
+    100% { transform: translateX(-100%); }
+  }
+  [dir='rtl'] .royal-shimmer::before {
+    transform: translateX(100%);
+  }
+
+  /* ─── دخول المحتوى بعد الشيمر ─── */
+  @keyframes contentFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
 }
 
 /* ─── لمعة فيكتورية فاخرة على صور المنتجات ────────────────────
