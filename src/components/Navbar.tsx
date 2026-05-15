@@ -17,6 +17,7 @@ import {
   Tag,
   Eye,
   User,
+  Crown,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
@@ -175,6 +176,15 @@ export function Navbar() {
                   {count}
                 </span>
               ) : null}
+            </span>
+          </NavLink>
+          <NavLink to="/coins" className={linkClass}>
+            <Crown className="h-5 w-5 shrink-0 text-amber-500 sm:h-4 sm:w-4" />
+            <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+              {isAr ? 'متجر الأكواد' : 'Coupons Store'}
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                {isAr ? 'جديد' : 'NEW'}
+              </span>
             </span>
           </NavLink>
         </nav>

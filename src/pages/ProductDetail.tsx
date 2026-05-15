@@ -8,6 +8,7 @@ import { ProductCard } from '../components/ProductCard'
 import { ProductCardShimmer, ProductDetailShimmer } from '../components/Shimmer'
 import { ImageViewer } from '../components/ImageViewer'
 import { ProductRatingStars } from '../components/ProductRatingStars'
+import { RecentBuyersBadge } from '../components/RecentBuyersBadge'
 import { SEO } from '../components/SEO'
 import { breadcrumbLD, buildCanonical, productLD } from '../lib/seo'
 import { formatNumberEn } from '../lib/formatDigits'
@@ -300,6 +301,9 @@ export function ProductDetail() {
             {/* Star rating — opens modal on click (per-visitor, one rating each) */}
             <ProductRatingStars productId={product.id} />
           </div>
+
+          {/* Social proof: من اشترى هذا المنتج مؤخرًا */}
+          <RecentBuyersBadge productId={product.id} />
 
           {canBuy && product.sizes.length > 0 && (
             <div className="mt-6 rounded-2xl bg-victorian-100/90 px-4 py-4 shadow-sm outline-none dark:bg-victorian-900/45 sm:px-5 sm:py-5">

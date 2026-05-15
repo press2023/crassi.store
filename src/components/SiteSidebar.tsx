@@ -11,6 +11,7 @@ import {
   Eye,
   LogIn,
   User,
+  Crown,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
@@ -95,6 +96,15 @@ export function SiteSidebar() {
         <NavLink to="/track" className={itemClass}>
           <MapPin className="h-4 w-4 shrink-0" />
           {lang === 'ar' ? 'تتبع طلبي' : 'Track order'}
+        </NavLink>
+        <NavLink to="/coins" className={itemClass}>
+          <Crown className="h-4 w-4 shrink-0 text-amber-500" />
+          <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+            {isAr ? 'متجر الأكواد' : 'Coupons Store'}
+            <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+              {isAr ? 'جديد' : 'NEW'}
+            </span>
+          </span>
         </NavLink>
         <NavLink to={isAdmin ? '/admin' : '/login'} className={itemClass}>
           {isAdmin ? <User className="h-4 w-4 shrink-0" /> : <LogIn className="h-4 w-4 shrink-0" />}

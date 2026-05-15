@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Printer } from 'lucide-react'
 import { createOrder } from '../api'
+import { RoyalCoinIcon } from '../components/RoyalCoinIcon'
 import { SEO } from '../components/SEO'
 import { OrderInvoice, type InvoiceOrder } from '../components/OrderInvoice'
 import { VictorianQR } from '../components/VictorianQR'
@@ -39,7 +40,9 @@ const inputClass =
 
 export function Checkout() {
   const { t, isAr } = useLanguage()
-  const { items, clear, discount } = useCart()
+  const { items, clear, discount, grandTotal } = useCart()
+  // قطع ذهبية ملكية مُتوقَّعة عند تسليم الطلب (١.٦٪ من المجموع)
+  const expectedCoins = Math.floor(grandTotal * 0.016)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [province, setProvince] = useState('')
@@ -101,12 +104,38 @@ export function Checkout() {
             </p>
           </div>
 
+          {/* بانر القطع الذهبية الملكية */}
+          {expectedCoins > 0 && (
+            <div className="mx-auto mt-6 flex max-w-sm items-center gap-3 rounded-2xl border-2 border-amber-300 bg-gradient-to-l from-amber-50 to-cream-50 px-4 py-3 text-start shadow-md dark:border-amber-500/40 dark:from-amber-900/30 dark:to-victorian-950">
+              <RoyalCoinIcon size={48} />
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-sm font-bold text-victorian-900 dark:text-cream-50">
+                  {isAr
+                    ? `${expectedCoins.toLocaleString('en-US')} قطعة ذهبية ملكية بانتظارك 👑`
+                    : `${expectedCoins.toLocaleString('en-US')} royal coins waiting for you 👑`}
+                </p>
+                <p className="mt-0.5 text-xs text-victorian-600 dark:text-cream-300">
+                  {isAr
+                    ? 'تُمنح فور تسليم الطلب. ادخل متجر الأكواد لرؤيتها لاحقًا.'
+                    : 'Awarded once your order is delivered. Visit the Coupons Store to redeem.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               to={`/track?id=${doneId}`}
               className="rounded-full bg-slate-900 px-6 py-3 text-sm font-bold text-white dark:bg-white dark:text-slate-900"
             >
               {isAr ? 'تتبع الطلب' : 'Track order'}
+            </Link>
+            <Link
+              to="/coins"
+              className="inline-flex items-center gap-2 rounded-full border-2 border-amber-400 bg-amber-50 px-6 py-3 text-sm font-bold text-amber-900 transition hover:bg-amber-100 dark:border-amber-500/50 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/40"
+            >
+              <RoyalCoinIcon size={18} />
+              {isAr ? 'متجر الأكواد' : 'Coupons Store'}
             </Link>
             <button
               type="button"
@@ -170,6 +199,10 @@ export function Checkout() {
         })),
       })
       saveOrderId(id)
+      // ربط الهاتف بحساب القطع الذهبية تلقائيًا — لا حاجة لإدخاله لاحقًا
+      try {
+        localStorage.setItem('classi-coins-phone', phone)
+      } catch { /* ignore */ }
       setDoneId(id)
       clear()
     } catch (err) {
@@ -299,6 +332,25 @@ export function Checkout() {
         ) : null}
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
+
+        {/* قطع ذهبية ملكية مُتوقَّعة */}
+        {expectedCoins > 0 && (
+          <div className="flex items-center gap-3 rounded-2xl border border-amber-300/60 bg-gradient-to-l from-amber-50 to-cream-50 px-4 py-3 dark:border-amber-500/30 dark:from-amber-900/20 dark:to-victorian-950">
+            <RoyalCoinIcon size={36} />
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-sm font-bold text-victorian-900 dark:text-cream-50">
+                {isAr
+                  ? `ستربح ${expectedCoins.toLocaleString('en-US')} قطعة ذهبية ملكية 👑`
+                  : `You'll earn ${expectedCoins.toLocaleString('en-US')} royal gold coins 👑`}
+              </p>
+              <p className="mt-0.5 text-xs text-victorian-600 dark:text-cream-300">
+                {isAr
+                  ? 'تُمنح تلقائيًا عند تسليم الطلب — استبدلها بأكواد خصم في «متجر الأكواد»'
+                  : 'Auto-credited on delivery — redeem in the Coupons Store'}
+              </p>
+            </div>
+          </div>
+        )}
 
         <button
           type="submit"

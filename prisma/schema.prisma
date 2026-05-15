@@ -81,7 +81,34 @@ model Order {
   discount       Discount?   @relation(fields: [discountId], references: [id], onDelete: SetNull)
   discountCode   String?
   discountAmount Decimal     @default(0) @db.Decimal(10, 2)
+  // عدد القطع الذهبية الملكية الممنوحة عند تسليم الطلب (٠ = لم تُمنح بعد)
+  coinsAwarded   Int         @default(0)
   items          OrderItem[]
+}
+
+// القطع الذهبية الملكية — رصيد لكل رقم هاتف عراقي بعد تسليم الطلبات
+model CoinAccount {
+  phone       String   @id // رقم الهاتف الموحَّد (أرقام فقط)
+  balance     Int      @default(0)
+  totalEarned Int      @default(0)
+  totalSpent  Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
+// سجل عمليات القطع الذهبية (كسب/استبدال)
+model CoinTransaction {
+  id           String   @id @default(cuid())
+  phone        String
+  amount       Int      // موجب = كسب، سالب = استبدال
+  type         String   // "earn" | "spend"
+  orderId      String?  // عند الكسب
+  discountCode String?  // عند الاستبدال (الكود المُولَّد)
+  description  String   @default("")
+  createdAt    DateTime @default(now())
+
+  @@index([phone])
+  @@index([orderId])
 }
 
 // أكواد الخصم — يُنشئها المشرف، تُطبَّق عند الدفع وتعدّل المجموع.

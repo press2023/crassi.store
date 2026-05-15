@@ -15,6 +15,7 @@ import reviewsRoutes from './routes/reviews.js'
 import productRatingsRoutes from './routes/productRatings.js'
 import pushRoutes from './routes/push.js'
 import discountsRoutes, { evaluateDiscount } from './routes/discounts.js'
+import coinsRoutes from './routes/coins.js'
 import { sendPushToAll } from './lib/push.js'
 import { DELIVERY_FEE_IQD } from '../src/lib/deliveryFee.ts'
 
@@ -121,6 +122,7 @@ app.use('/api/reviews', reviewsRoutes)
 app.use('/api/products', productRatingsRoutes)
 app.use('/api/admin/push', pushRoutes)
 app.use('/api/discounts', discountsRoutes)
+app.use('/api/coins', coinsRoutes)
 
 function serializeProduct(p: {
   price: { toString(): string }
@@ -362,6 +364,65 @@ app.post('/api/orders', async (req, res) => {
     if (msg.startsWith('discount_')) return res.status(400).json({ error: msg })
     console.error(e)
     res.status(503).json({ error: 'order_failed' })
+  }
+})
+
+// ── Social proof: آخر المشتريات (مع خصوصية صارمة) ─────────────────────────
+// يُرجع آخر طلبات أصحاب قيمة (غير ملغاة) خلال آخر ١٤ يوم.
+// لا تكشف الهاتف/العنوان/البريد — فقط الاسم الأول والمحافظة.
+app.get('/api/recent-purchases', async (req, res) => {
+  try {
+    const productId = typeof req.query.productId === 'string' ? req.query.productId : undefined
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 25))
+    const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+
+    const items = await prisma.orderItem.findMany({
+      where: {
+        ...(productId ? { productId } : {}),
+        order: {
+          createdAt: { gte: since },
+          status: { not: 'cancelled' },
+        },
+      },
+      include: {
+        order: { select: { id: true, customerName: true, province: true, createdAt: true, status: true } },
+        product: { select: { id: true, slug: true, name: true, nameAr: true, images: true } },
+      },
+      orderBy: { order: { createdAt: 'desc' } },
+      take: limit,
+    })
+
+    // إخفاء الأرقام/الإيميل من «الاسم الأول»
+    const sanitizeFirstName = (raw: string): string => {
+      const cleaned = String(raw || '').replace(/[\u0660-\u0669]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+      const first = cleaned.trim().split(/\s+/)[0] || ''
+      // لو الاسم رقم/هاتف/إيميل — استبدل بكلمة عامة
+      if (!first || /^[+\d]/.test(first) || /@/.test(first)) return 'زبون'
+      return first.slice(0, 24)
+    }
+
+    const result = items
+      .filter((i) => i.product) // المنتجات المحذوفة تُستبعد
+      .map((i) => ({
+        id: i.id,
+        firstName: sanitizeFirstName(i.order.customerName),
+        province: i.order.province || '',
+        quantity: i.quantity,
+        createdAt: i.order.createdAt.toISOString(),
+        product: {
+          id: i.product!.id,
+          slug: i.product!.slug,
+          name: i.product!.name,
+          nameAr: i.product!.nameAr,
+          image: i.product!.images?.[0] ?? null,
+        },
+      }))
+
+    res.setHeader('Cache-Control', 'public, max-age=30')
+    res.json(result)
+  } catch (e) {
+    console.error('[recent-purchases] error:', e)
+    res.json([])
   }
 })
 

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { requireAdmin, requirePermission } from '../lib/auth.js'
 import { deleteStoredObjectByUrl, deleteStoredObjectsByUrls } from '../lib/storage.js'
+import { awardCoinsForDelivery, revokeCoinsIfNotDelivered } from '../lib/coins.js'
 
 const router = Router()
 router.use(requireAdmin)
@@ -328,6 +329,16 @@ router.put('/orders/:id/status', requirePermission('orders'), async (req, res) =
       where: { id: req.params.id },
       data: { status },
     })
+    // قطع ذهبية ملكية: امنح عند التسليم، اسحب إن أُلغي التسليم
+    try {
+      if (status === 'delivered') {
+        await awardCoinsForDelivery(row.id)
+      } else {
+        await revokeCoinsIfNotDelivered(row.id)
+      }
+    } catch (e) {
+      console.error('[coins] award/revoke failed:', e)
+    }
     res.json({ id: row.id, status: row.status })
   } catch {
     res.status(404).json({ error: 'not_found' })

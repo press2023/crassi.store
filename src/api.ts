@@ -237,6 +237,101 @@ export async function createOrder(payload: {
   return parseJson<{ id: string }>(res)
 }
 
+// ── Social proof: آخر المشتريات ─────────────────────
+
+export type RecentPurchase = {
+  id: string
+  firstName: string
+  province: string
+  quantity: number
+  createdAt: string
+  product: {
+    id: string
+    slug: string
+    name: string
+    nameAr: string
+    image: string | null
+  }
+}
+
+export async function fetchRecentPurchases(opts?: {
+  productId?: string
+  limit?: number
+}): Promise<RecentPurchase[]> {
+  try {
+    const qs = new URLSearchParams()
+    if (opts?.productId) qs.set('productId', opts.productId)
+    if (opts?.limit) qs.set('limit', String(opts.limit))
+    const tail = qs.toString()
+    const res = await fetch(`${base}/api/recent-purchases${tail ? `?${tail}` : ''}`)
+    if (!res.ok) return []
+    return (await res.json()) as RecentPurchase[]
+  } catch {
+    return []
+  }
+}
+
+// ── القطع الذهبية الملكية ──────────────────────────
+
+export type CoinTier = { percent: number; price: number }
+
+export type CoinsMeta = {
+  earnRate: number
+  tiers: CoinTier[]
+  maxDiscountIQD: number
+  validDays: number
+}
+
+export type CoinTransaction = {
+  id: string
+  amount: number
+  type: 'earn' | 'spend'
+  orderId: string | null
+  discountCode: string | null
+  description: string
+  createdAt: string
+}
+
+export type CoinAccount = {
+  phone: string
+  balance: number
+  totalEarned: number
+  totalSpent: number
+  transactions: CoinTransaction[]
+}
+
+export async function fetchCoinsMeta(): Promise<CoinsMeta> {
+  const res = await fetch(`${base}/api/coins/meta`)
+  return parseJson<CoinsMeta>(res)
+}
+
+export async function fetchCoinAccount(phone: string): Promise<CoinAccount> {
+  const res = await fetch(`${base}/api/coins/account?phone=${encodeURIComponent(phone)}`)
+  return parseJson<CoinAccount>(res)
+}
+
+export type CoinRedeemResult = {
+  ok: true
+  code: string
+  percent: number
+  coinsSpent: number
+  expiresAt: string
+  maxDiscountIQD: number
+}
+
+export async function redeemCoins(phone: string, percent: number): Promise<CoinRedeemResult> {
+  const res = await fetch(`${base}/api/coins/redeem`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, percent }),
+  })
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(data.error || res.statusText || 'redeem_failed')
+  }
+  return res.json() as Promise<CoinRedeemResult>
+}
+
 // ── أكواد الخصم ─────────────────────────────────────
 
 /** نتيجة التحقق العامة من كود الخصم — تُستخدم في السلة والدفع */

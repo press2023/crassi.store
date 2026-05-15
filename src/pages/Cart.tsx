@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { DELIVERY_FEE_IQD } from '../lib/deliveryFee'
 import { formatNumberEn } from '../lib/formatDigits'
 import { SEO } from '../components/SEO'
+import { RoyalCoinIcon } from '../components/RoyalCoinIcon'
 
 function discountErrorMessage(code: string | null, isAr: boolean): string {
   switch (code) {
@@ -88,6 +89,8 @@ export function Cart() {
     )
   }
 
+  // قطع ذهبية ملكية متوقَّعة (١.٦٪ من المجموع — مطابقة للخادم)
+  const expectedCoins = Math.floor(grandTotal * 0.016)
   const notice = t('deliveryFeeNotice').replace('{amount}', formatNumberEn(DELIVERY_FEE_IQD))
 
   return (
@@ -268,6 +271,31 @@ export function Cart() {
           </span>
         </div>
       </div>
+
+      {/* بانر القطع الذهبية الملكية — يضيف حافزًا قبل الدفع */}
+      {expectedCoins > 0 && (
+        <Link
+          to="/coins"
+          className="mt-4 flex items-center gap-4 rounded-2xl border-2 border-amber-300/70 bg-gradient-to-l from-amber-50 via-cream-50 to-amber-50 p-4 shadow-sm transition hover:shadow-md dark:border-amber-500/40 dark:from-amber-900/30 dark:via-victorian-950 dark:to-amber-950/30"
+        >
+          <RoyalCoinIcon size={64} />
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-base font-bold text-victorian-900 dark:text-cream-50">
+              {isAr
+                ? `ستربح ${formatNumberEn(expectedCoins)} قطعة ذهبية ملكية 👑`
+                : `You'll earn ${formatNumberEn(expectedCoins)} royal gold coins 👑`}
+            </p>
+            <p className="mt-0.5 text-xs text-victorian-600 dark:text-cream-300">
+              {isAr
+                ? 'تُمنح فور تسليم الطلب — استبدلها بكوبون خصم في «متجر الأكواد»'
+                : 'Awarded once your order is delivered — redeem for a discount coupon'}
+            </p>
+          </div>
+          <span className="hidden shrink-0 rounded-full bg-amber-500 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white sm:inline-block">
+            {isAr ? 'متجر الأكواد' : 'Store ↗'}
+          </span>
+        </Link>
+      )}
 
       <Link
         to="/checkout"

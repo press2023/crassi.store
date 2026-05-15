@@ -21,6 +21,7 @@ import { VisitorsPage } from './pages/VisitorsPage'
 import { Privacy } from './pages/Privacy'
 import { Terms } from './pages/Terms'
 import { FAQ } from './pages/FAQ'
+import { Coins } from './pages/Coins'
 
 export default function App() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="terms" element={<Terms />} />
         <Route path="faq" element={<FAQ />} />
         <Route path="visitors" element={<VisitorsPage />} />
+        <Route path="coins" element={<Coins />} />
         <Route path="track" element={<TrackOrder />} />
         <Route path="order/:id" element={<TrackOrder />} />
         <Route path="login" element={<Login />} />

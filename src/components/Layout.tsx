@@ -3,6 +3,7 @@ import { SidebarLayoutProvider } from '../context/SidebarLayoutContext'
 import { Footer } from './Footer'
 import { Navbar } from './Navbar'
 import { SiteSidebar } from './SiteSidebar'
+import { SocialProofToast } from './SocialProofToast'
 
 export function Layout() {
   return (
@@ -17,6 +18,7 @@ export function Layout() {
           <Footer />
         </div>
       </div>
+      <SocialProofToast />
     </SidebarLayoutProvider>
   )
 }
